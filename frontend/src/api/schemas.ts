@@ -23,6 +23,9 @@ export const ListEntrySchema = z.object({
   next_earnings: z.string().nullable().default(null),
   hype_warning: z.boolean().nullable().default(null),
   updated_at: z.string().nullable().default(null),
+  shares: z.number().nullable().default(null),
+  thesis: z.string().nullable().default(null),
+  thesis_verdict: z.enum(['supports', 'challenges', 'mixed', 'no_signal']).nullable().default(null),
 })
 export const ListsSchema = z.object({
   holdings: z.array(ListEntrySchema),
@@ -180,3 +183,31 @@ export const JobStatusSchema = z.object({
   last_run: z.string().nullable(),
 })
 export type JobStatus = z.infer<typeof JobStatusSchema>
+
+export const ExposureSchema = z.object({
+  total_value: z.number(),
+  positions: z.array(
+    z.object({
+      ticker: z.string(),
+      shares: z.number(),
+      price: z.number(),
+      value: z.number(),
+      weight: z.number(),
+      name: z.string().nullable(),
+      kind: z.enum(['stock', 'etf']),
+    }),
+  ),
+  underlying: z.array(
+    z.object({
+      symbol: z.string(),
+      name: z.string(),
+      weight: z.number(),
+      direct: z.number(),
+      via: z.record(z.string(), z.number()),
+    }),
+  ),
+  rest_of_funds: z.number(),
+  sectors: z.array(z.object({ sector: z.string(), weight: z.number() })),
+  missing_prices: z.array(z.string()),
+})
+export type Exposure = z.infer<typeof ExposureSchema>

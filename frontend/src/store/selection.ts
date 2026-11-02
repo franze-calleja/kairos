@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type View = 'reading' | 'track' | 'settings'
+export type View = 'reading' | 'track' | 'settings' | 'exposure' | 'compare'
 
 interface SelectionState {
   selected: string | null

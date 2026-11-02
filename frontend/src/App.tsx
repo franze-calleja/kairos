@@ -1,5 +1,6 @@
 import { Disclaimer } from './components/Disclaimer'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { ExposurePage } from './components/ExposurePage'
 import { Overview } from './components/Overview'
 import { ReadingPanel } from './components/ReadingPanel'
 import { SettingsPage } from './components/SettingsPage'
@@ -11,6 +12,7 @@ import { useSelection } from './store/selection'
 function Main() {
   const { selected, view, trackTicker } = useSelection()
   if (view === 'settings') return <SettingsPage />
+  if (view === 'exposure') return <ExposurePage />
   if (view === 'track') return <TrackRecordPanel key={trackTicker ?? 'all'} ticker={trackTicker ?? undefined} />
   if (!selected) return <Overview />
   return <ReadingPanel key={selected} ticker={selected} />

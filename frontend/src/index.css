@@ -992,3 +992,74 @@ h3 {
     justify-content: flex-start;
   }
 }
+
+/* Exposure */
+.exposure h1 {
+  font-size: 22px;
+}
+
+.rest-row td {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.positions {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.positions td {
+  padding: 5px 4px;
+}
+
+.shares-form input {
+  width: 90px;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font: inherit;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.total-line {
+  margin: 10px 0 0;
+  text-align: right;
+}
+
+.bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bars li {
+  display: grid;
+  grid-template-columns: 150px 1fr 52px;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.bar-track {
+  height: 10px;
+  background: var(--neutral-bg);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+}
+
+.bar-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
