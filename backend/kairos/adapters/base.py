@@ -1,5 +1,7 @@
 import asyncio
 import hashlib
+import html
+import re
 import time
 
 import httpx
@@ -52,3 +54,11 @@ class FinnhubLimiter:
 
 
 finnhub_limiter = FinnhubLimiter()
+
+
+_TAG = re.compile(r"<[^>]+>")
+_WS = re.compile(r"\s+")
+
+
+def strip_html(text: str) -> str:
+    return _WS.sub(" ", html.unescape(_TAG.sub(" ", text or ""))).strip()

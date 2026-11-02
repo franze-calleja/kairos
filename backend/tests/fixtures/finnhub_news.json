@@ -1,0 +1,4 @@
+[
+  {"category": "company", "datetime": 1793520000, "headline": "Nvidia raises data-center guidance", "id": 1, "image": "", "related": "NVDA", "source": "Reuters", "summary": "Nvidia lifted its outlook citing <b>strong</b> AI demand.", "url": "https://example.com/nvda-guidance"},
+  {"category": "company", "datetime": 1793433600, "headline": "Export rule chatter weighs on chip stocks", "id": 2, "image": "", "related": "NVDA", "source": "CNBC", "summary": "Speculation about new export limits.", "url": "https://example.com/export-rules"}
+]
