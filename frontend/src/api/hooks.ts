@@ -105,3 +105,14 @@ export function useSetShares() {
     },
   })
 }
+
+export function useSetThesis() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ list, ticker, thesis }: { list: ListName; ticker: string; thesis: string | null }) =>
+      ListEntrySchema.parse(
+        (await api.put(`/lists/${list}/${encodeURIComponent(ticker)}/thesis`, { thesis })).data,
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['lists'] }),
+  })
+}

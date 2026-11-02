@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { apiError } from '../api/client'
-import { useReading, useRefreshReading } from '../api/hooks'
+import { useLists, useReading, useRefreshReading } from '../api/hooks'
 import { AddMoreCard } from './reading/AddMoreCard'
 import { BullBearCard } from './reading/BullBearCard'
 import { DataHealth } from './reading/DataHealth'
@@ -9,6 +9,7 @@ import { EventsCard } from './reading/EventsCard'
 import { HypeFlagsCard } from './reading/HypeFlagsCard'
 import { PriceChart } from './reading/PriceChart'
 import { QuickNumbersCard } from './reading/QuickNumbersCard'
+import { ReasonCard } from './reading/ReasonCard'
 import { SourcesList } from './reading/SourcesList'
 import { VerdictCard } from './reading/VerdictCard'
 
@@ -35,6 +36,7 @@ const UPDATED_MESSAGE_MS = 4000
 export function ReadingPanel({ ticker }: { ticker: string }) {
   const { data: reading, isPending, isError, error } = useReading(ticker)
   const refresh = useRefreshReading()
+  const { data: lists } = useLists()
   const [justUpdated, setJustUpdated] = useState(false)
 
   useEffect(() => {
@@ -76,6 +78,20 @@ export function ReadingPanel({ ticker }: { ticker: string }) {
           )}
         </div>
         <div className="rail-side">
+          {(() => {
+            const held = lists?.holdings.find((e) => e.ticker === reading.ticker)
+            const watched = lists?.watching.find((e) => e.ticker === reading.ticker)
+            const entry = held ?? watched
+            return (
+              <ReasonCard
+                key={`${reading.ticker}-${entry?.thesis ?? ''}`}
+                ticker={reading.ticker}
+                list={held ? 'holdings' : watched ? 'watching' : null}
+                thesis={entry?.thesis ?? null}
+                reading={reading}
+              />
+            )
+          })()}
           {reading.price && <AddMoreCard price={reading.price} />}
           <EventsCard events={reading.events} asOf={reading.created_at} />
           <HypeFlagsCard hype={reading.hype} />

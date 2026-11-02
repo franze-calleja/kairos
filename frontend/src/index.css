@@ -1063,3 +1063,32 @@ h3 {
   font-variant-numeric: tabular-nums;
   color: var(--ink);
 }
+
+/* Your reason */
+.reason-form textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+}
+
+.reason-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.reason-check {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.reason-flag {
+  color: var(--hype);
+}

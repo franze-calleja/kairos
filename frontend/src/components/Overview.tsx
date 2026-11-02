@@ -28,7 +28,13 @@ function Rows({ title, entries }: { title: string; entries: ListEntry[] }) {
           onKeyDown={(ev) => ev.key === 'Enter' && select(e.ticker)}
         >
           <td>
-            <b>{e.ticker}</b> {e.name && <span className="muted small">{e.name}</span>}
+            <b>{e.ticker}</b>{' '}
+            {e.thesis_verdict === 'challenges' && (
+              <span className="reason-flag" aria-label="Your reason is being challenged" title="Your reason is being challenged">
+                ⚠
+              </span>
+            )}{' '}
+            {e.name && <span className="muted small">{e.name}</span>}
           </td>
           <td className="num">{e.price !== null ? `$${e.price.toFixed(2)}` : '—'}</td>
           <td className={`num ${(e.day_change_pct ?? 0) >= 0 ? 'up' : 'down'}`}>{pct(e.day_change_pct)}</td>

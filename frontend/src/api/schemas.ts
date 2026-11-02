@@ -103,6 +103,12 @@ export const HypeFlagSchema = z.object({
 
 export const ClaimSchema = z.object({ text: z.string(), source_ids: z.array(z.string()) })
 
+export const ThesisCheckSchema = z.object({
+  verdict: z.enum(['supports', 'challenges', 'mixed', 'no_signal']),
+  text: z.string(),
+  source_ids: z.array(z.string()),
+})
+
 export const AISummarySchema = z.object({
   lean: LeanSchema,
   confidence: z.enum(['low', 'medium', 'high']),
@@ -112,6 +118,7 @@ export const AISummarySchema = z.object({
   bull_case: z.array(ClaimSchema),
   bear_case: z.array(ClaimSchema),
   takeaway: ClaimSchema.nullable().optional(),
+  thesis_check: ThesisCheckSchema.nullable().optional(),
 })
 
 export const ReadingSchema = z.object({
@@ -127,6 +134,7 @@ export const ReadingSchema = z.object({
   ai_status: AIStatusSchema,
   sources: z.array(NewsItemSchema),
   data_health: z.array(SourceStatusSchema),
+  thesis_checked: z.string().nullable().optional(),
 })
 
 const HorizonStatsSchema = z.object({
@@ -211,3 +219,4 @@ export const ExposureSchema = z.object({
   missing_prices: z.array(z.string()),
 })
 export type Exposure = z.infer<typeof ExposureSchema>
+export type ThesisCheck = z.infer<typeof ThesisCheckSchema>
