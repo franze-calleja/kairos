@@ -14,6 +14,7 @@ from kairos.db import get_meta
 from kairos.models import Reading
 from kairos.services import scheduler
 from kairos.services.discover import latest_discover
+from kairos.services.exposure import compute_exposure
 from kairos.services.lists import (
     ListName,
     add_ticker,
@@ -227,3 +228,8 @@ def put_thesis(name: ListName, ticker: str, body: ThesisIn, conn: Conn) -> ListE
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
     return _entry(conn, normalize_ticker(ticker), name)
+
+
+@router.get("/exposure")
+async def get_exposure(conn: Conn) -> dict:
+    return await compute_exposure(conn, datetime.now(UTC))

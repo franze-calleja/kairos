@@ -72,3 +72,12 @@ async def get_fund_overview(etf: str) -> tuple[dict[str, float | None], SourceSt
         return await asyncio.to_thread(_fund_overview, etf), ok("yfinance")
     except Exception as e:
         return {"expense_ratio": None, "aum": None}, error("yfinance", f"fund overview: {e}")
+
+
+async def get_sector_weightings(etf: str) -> tuple[dict[str, float], SourceStatus]:
+    try:
+        weights = await asyncio.to_thread(lambda: dict(yf.Ticker(etf).funds_data.sector_weightings))
+    except Exception as e:
+        return {}, error("yfinance", f"sectors: {e}")
+    weights = {k: float(v) for k, v in weights.items() if v}
+    return weights, ok("yfinance") if weights else error("yfinance", "no sector data")
