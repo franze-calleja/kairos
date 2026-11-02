@@ -83,3 +83,25 @@ test('triggered hype flags show a warning', async () => {
   expect(await screen.findByText('exchange: PNK')).toBeInTheDocument()
   expect(screen.getByText('Hype warning')).toBeInTheDocument()
 })
+
+test('passed hype checks use neutral labels, not warning wording', async () => {
+  serve({})
+  renderWithClient(<ReadingPanel ticker="NVDA" />)
+  const card = (await screen.findByRole('heading', { name: 'Hype check' })).closest('section')!
+  for (const label of ['Company size', 'Share price', 'Exchange', 'Trading volume', '5-day price move', 'Buzz vs. real news']) {
+    expect(within(card).getByText(new RegExp(label))).toBeInTheDocument()
+  }
+  for (const warning of ['Very small company', 'Penny stock price', 'Thinly traded', 'Not on a major exchange']) {
+    expect(within(card).queryByText(new RegExp(warning))).toBeNull()
+  }
+})
+
+test('triggered hype checks use warning wording', async () => {
+  serve({
+    hype: reading.hype.map((f) => (f.code === 'penny' ? { ...f, triggered: true, value: '$1.20 share price' } : f)),
+  })
+  renderWithClient(<ReadingPanel ticker="NVDA" />)
+  const card = (await screen.findByRole('heading', { name: 'Hype check' })).closest('section')!
+  expect(within(card).getByText(/Penny stock price/)).toBeInTheDocument()
+  expect(within(card).queryByText(/Share price/)).toBeNull()
+})
