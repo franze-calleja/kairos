@@ -2,7 +2,7 @@ from functools import lru_cache
 from typing import Annotated
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -34,6 +34,17 @@ class Settings(BaseSettings):
     low_volume: float = 100_000
     attention_ratio: float = 3.0
     attention_min_articles: int = 5
+
+    @model_validator(mode="after")
+    def _evening_after_morning(self) -> Settings:
+        # HH:MM strings compare correctly as text. Morning is due until evening starts.
+        if self.evening_refresh_time and self.evening_refresh_time <= self.morning_refresh_time:
+            raise ValueError(
+                "EVENING_REFRESH_TIME must be later than MORNING_REFRESH_TIME "
+                f"(got {self.evening_refresh_time} vs {self.morning_refresh_time}); "
+                "leave it empty to turn the evening refresh off"
+            )
+        return self
 
     @field_validator("kairos_seed_holdings", "kairos_seed_watching", mode="before")
     @classmethod

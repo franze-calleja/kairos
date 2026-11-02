@@ -33,8 +33,9 @@ async def _cached(kind: str, ticker: str, now: datetime, fetch) -> Any:
     hit = _cache.get((kind, ticker))
     if hit and hit[0] > now:
         return hit[1]
-    value, _status = await fetch(ticker)
-    _cache[(kind, ticker)] = (now + CACHE_FOR, value)
+    value, status = await fetch(ticker)
+    if status.status == "ok":  # never let a transient Yahoo failure stick for hours
+        _cache[(kind, ticker)] = (now + CACHE_FOR, value)
     return value
 
 

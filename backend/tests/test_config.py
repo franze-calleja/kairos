@@ -53,3 +53,9 @@ def test_evening_refresh_time():
     assert Settings(_env_file=None, evening_refresh_time="").evening_refresh_time is None
     with pytest.raises(ValidationError, match="HH:MM"):
         Settings(_env_file=None, evening_refresh_time="9pm")
+
+
+@pytest.mark.parametrize("evening", ["06:00", "07:00"])
+def test_evening_must_be_after_morning(evening):
+    with pytest.raises(ValidationError, match="later than MORNING_REFRESH_TIME"):
+        Settings(_env_file=None, morning_refresh_time="07:00", evening_refresh_time=evening)

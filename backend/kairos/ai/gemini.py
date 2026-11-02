@@ -40,12 +40,18 @@ async def _acquire(budget: RequestBudget) -> bool:
     return budget.try_acquire(_clock())
 
 
+NO_SIGNAL = ThesisCheck(verdict="no_signal", text="", source_ids=[])
+
+
 def _valid_thesis(check: ThesisCheck | None, allowed: set[str]) -> ThesisCheck | None:
-    if check is None or check.verdict == "no_signal":
-        return check
+    """A verdict must rest on supplied sources; anything else is "no clear signal" with no text."""
+    if check is None:
+        return None
+    if check.verdict == "no_signal" or not check.text.strip():
+        return NO_SIGNAL
     if check.source_ids and set(check.source_ids) <= allowed:
         return check
-    return ThesisCheck(verdict="no_signal", text="", source_ids=[])
+    return NO_SIGNAL
 
 
 def _valid(claims: list[Claim], allowed: set[str]) -> list[Claim]:

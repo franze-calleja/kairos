@@ -181,7 +181,7 @@ async def build_reading(
         ai_status=ai_status,
         sources=cleaned,
         data_health=_merge_health(statuses),
-        thesis_checked=thesis if ai else None,
+        thesis_checked=thesis,  # what was sent for checking; ai may still be None
         **parts,
     )
     conn.execute(

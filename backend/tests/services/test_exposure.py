@@ -132,3 +132,14 @@ async def test_cache_reused_within_6h(conn, yahoo):
     assert yahoo.holdings_calls == 1
     await exposure.compute_exposure(conn, NOW + timedelta(hours=7))
     assert yahoo.holdings_calls == 2
+
+
+async def test_failed_fetch_is_not_cached(conn, yahoo):
+    hold(conn, "QQQ", 5)
+    good = yahoo.holdings
+    yahoo.holdings = {}
+    first = await exposure.compute_exposure(conn, NOW)
+    assert first["rest_of_funds"] == pytest.approx(1.0)
+    yahoo.holdings = good
+    second = await exposure.compute_exposure(conn, NOW + timedelta(minutes=1))
+    assert second["underlying"], "a transient Yahoo failure must not stick for 6 hours"

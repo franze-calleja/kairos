@@ -154,3 +154,14 @@ async def test_no_thesis_no_check(settings, conn, src):
     r = await build_reading(settings, conn, "NVDA", NOW)
     assert "Thesis to evaluate" not in src.last_prompt
     assert r.thesis_checked is None
+
+
+async def test_thesis_recorded_even_when_ai_could_not_check(settings, conn, src):
+    from kairos.services.lists import add_ticker, set_thesis
+
+    add_ticker(conn, "holdings", "NVDA")
+    set_thesis(conn, "holdings", "NVDA", "AI demand")
+    src.finnhub_per_ticker, src.google_per_ticker = 1, 1  # too little news: no AI request
+    r = await build_reading(settings, conn, "NVDA", NOW)
+    assert r.ai is None
+    assert r.thesis_checked == "AI demand"
