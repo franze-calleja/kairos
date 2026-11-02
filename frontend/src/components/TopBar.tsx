@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { normalizeTicker } from '../api/tickers'
 import { useSelection } from '../store/selection'
+import { LogoMark } from './Logo'
 import { RefreshStatus } from './RefreshStatus'
 
 export function TopBar() {
@@ -20,8 +21,9 @@ export function TopBar() {
 
   return (
     <header className="topbar">
-      <button type="button" className="brand" onClick={goHome}>
-        KAIROS
+      <button type="button" className="brand" onClick={goHome} aria-label="Kairos home">
+        <LogoMark size={24} />
+        <span className="wordmark">kairos</span>
       </button>
       <form onSubmit={submit} className="search" role="search">
         <input

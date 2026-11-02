@@ -3,7 +3,7 @@ vi.mock('lightweight-charts', () => ({
   createChart: () => ({ addSeries: () => ({ setData: () => {} }), timeScale: () => ({ fitContent: () => {}, setVisibleLogicalRange: () => {} }), remove: () => {} }),
   LineSeries: {},
 }))
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import { expect, test } from 'vitest'
 import App from '../../App'
 import { renderWithClient } from '../../test/utils'
@@ -11,7 +11,9 @@ import { renderWithClient } from '../../test/utils'
 test('shows the disclaimer and brand', () => {
   renderWithClient(<App />)
   expect(screen.getByText('Kairos is a research tool, not financial advice.')).toBeInTheDocument()
-  expect(screen.getByText('KAIROS')).toBeInTheDocument()
+  const home = screen.getByRole('button', { name: 'Kairos home' })
+  expect(within(home).getByRole('img', { name: 'Kairos logo' })).toBeInTheDocument()
+  expect(within(home).getByText('kairos')).toBeInTheDocument()
 })
 
 test('a reading links to its own track record', async () => {
