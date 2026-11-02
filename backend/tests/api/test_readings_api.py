@@ -34,3 +34,14 @@ def test_reading_ok_and_lists_show_latest_lean(client, src):
     assert entry["next_earnings"] is None
     assert entry["hype_warning"] is False
     assert entry["updated_at"] is not None
+
+
+def test_list_entry_shows_current_thesis_verdict(client, src):
+    client.post("/api/lists/holdings", json={"ticker": "NVDA"})
+    client.put("/api/lists/holdings/NVDA/thesis", json={"thesis": "AI demand"})
+    client.get("/api/readings/NVDA")
+    (entry,) = client.get("/api/lists").json()["holdings"]
+    assert entry["thesis_verdict"] == "challenges"
+    client.put("/api/lists/holdings/NVDA/thesis", json={"thesis": "Something new"})
+    (entry,) = client.get("/api/lists").json()["holdings"]
+    assert entry["thesis_verdict"] is None  # stale until the next reading

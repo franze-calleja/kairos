@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from kairos.adapters.prices import get_info
 from kairos.ai.budget import RequestBudget
@@ -53,6 +53,9 @@ class ListEntry(BaseModel):
     shares: float | None = None
     thesis: str | None = None
     thesis_verdict: str | None = None
+    # Internal: what the latest reading checked; not part of the API response.
+    thesis_checked: str | None = Field(default=None, exclude=True)
+    thesis_verdict_raw: str | None = Field(default=None, exclude=True)
 
 
 def _entry(conn: sqlite3.Connection, ticker: str, name: ListName | None = None) -> ListEntry:
@@ -63,6 +66,8 @@ def _entry(conn: sqlite3.Connection, ticker: str, name: ListName | None = None) 
         ).fetchone()
     extra = {"shares": mine["shares"], "thesis": mine["thesis"]} if mine else {}
     entry = _summary(conn, ticker)
+    if mine and mine["thesis"] and entry.thesis_checked == mine["thesis"]:
+        extra["thesis_verdict"] = entry.thesis_verdict_raw
     return entry.model_copy(update=extra)
 
 
@@ -90,6 +95,10 @@ def _summary(conn: sqlite3.Connection, ticker: str) -> ListEntry:
         else None,
         hype_warning=any(f.triggered for f in reading.hype),
         updated_at=reading.created_at.isoformat(),
+        thesis_checked=reading.thesis_checked,
+        thesis_verdict_raw=reading.ai.thesis_check.verdict
+        if reading.ai and reading.ai.thesis_check
+        else None,
     )
 
 
