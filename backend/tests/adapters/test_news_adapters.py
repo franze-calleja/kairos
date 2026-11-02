@@ -136,3 +136,22 @@ async def test_reddit_enabled_parses(settings, monkeypatch):
     assert res.status.status == "ok"
     assert len(res.items) == 1  # same post from 3 subs is deduped by URL
     assert res.items[0].source == "reddit"
+
+
+@respx.mock
+async def test_finnhub_key_never_in_error_or_url(settings):
+    settings.finnhub_api_key = "SECRETKEY123"
+    news_route = respx.get("https://finnhub.io/api/v1/company-news").mock(
+        return_value=httpx.Response(401, json={"error": "Invalid API key"})
+    )
+    respx.get("https://finnhub.io/api/v1/calendar/earnings").mock(return_value=httpx.Response(429))
+    async with _client() as c:
+        res = await finnhub.company_news(c, settings, "NVDA", 7, today=TODAY)
+        _, earn_status = await finnhub.earnings_calendar(c, settings, "NVDA", today=TODAY)
+    assert res.status.status == "error" and earn_status.status == "error"
+    assert "SECRETKEY123" not in (res.status.detail or "")
+    assert "SECRETKEY123" not in (earn_status.detail or "")
+    assert "401" in res.status.detail
+    request = news_route.calls.last.request
+    assert "SECRETKEY123" not in str(request.url)
+    assert request.headers["X-Finnhub-Token"] == "SECRETKEY123"

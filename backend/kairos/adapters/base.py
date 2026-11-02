@@ -62,3 +62,12 @@ _WS = re.compile(r"\s+")
 
 def strip_html(text: str) -> str:
     return _WS.sub(" ", html.unescape(_TAG.sub(" ", text or ""))).strip()
+
+
+def safe_detail(e: Exception) -> str:
+    """Error text safe to store and show: never includes request URLs (which may carry keys)."""
+    if isinstance(e, httpx.HTTPStatusError):
+        return f"HTTP {e.response.status_code}"
+    if isinstance(e, httpx.HTTPError):
+        return type(e).__name__
+    return f"{type(e).__name__}: {e}"[:200]

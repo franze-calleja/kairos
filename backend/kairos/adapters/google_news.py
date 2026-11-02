@@ -5,7 +5,7 @@ from urllib.parse import quote
 import feedparser
 import httpx
 
-from kairos.adapters.base import error, news_id, ok, strip_html
+from kairos.adapters.base import error, news_id, ok, safe_detail, strip_html
 from kairos.models import AdapterResult, NewsItem
 
 
@@ -41,5 +41,5 @@ async def search(
             if e.get("link")
         ]
     except (httpx.HTTPError, ValueError, AttributeError) as e:
-        return AdapterResult[NewsItem](items=[], status=error("google_news", str(e) or "error"))
+        return AdapterResult[NewsItem](items=[], status=error("google_news", safe_detail(e)))
     return AdapterResult[NewsItem](items=items, status=ok("google_news"))

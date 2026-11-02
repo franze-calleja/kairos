@@ -3,7 +3,7 @@ from datetime import UTC, date, datetime, timedelta
 
 import httpx
 
-from kairos.adapters.base import error, news_id, not_configured, ok
+from kairos.adapters.base import error, news_id, not_configured, ok, safe_detail
 from kairos.config import Settings
 from kairos.models import AdapterResult, NewsItem
 
@@ -71,5 +71,5 @@ async def recent_filings(
                 )
             )
     except (httpx.HTTPError, ValueError, KeyError, TypeError) as e:
-        return AdapterResult[NewsItem](items=[], status=error("sec", str(e) or type(e).__name__))
+        return AdapterResult[NewsItem](items=[], status=error("sec", safe_detail(e)))
     return AdapterResult[NewsItem](items=items, status=ok("sec"))

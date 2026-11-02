@@ -4,7 +4,7 @@ from urllib.parse import quote
 import feedparser
 import httpx
 
-from kairos.adapters.base import disabled, error, news_id, ok, strip_html
+from kairos.adapters.base import disabled, error, news_id, ok, safe_detail, strip_html
 from kairos.adapters.google_news import _published
 from kairos.config import Settings
 from kairos.models import AdapterResult, NewsItem
@@ -41,5 +41,7 @@ async def mentions(
                         related_ticker=ticker,
                     )
     except (httpx.HTTPError, ValueError, AttributeError) as e:
-        return AdapterResult[NewsItem](items=list(seen.values()), status=error("reddit", str(e)))
+        return AdapterResult[NewsItem](
+            items=list(seen.values()), status=error("reddit", safe_detail(e))
+        )
     return AdapterResult[NewsItem](items=list(seen.values()), status=ok("reddit"))
