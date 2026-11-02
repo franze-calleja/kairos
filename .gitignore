@@ -1,2 +1,12 @@
 .superpowers/
 .env
+data/
+node_modules/
+dist/
+.venv/
+__pycache__/
+*.pyc
+.ruff_cache/
+.pytest_cache/
+backend/kairos/static/
+.DS_Store
