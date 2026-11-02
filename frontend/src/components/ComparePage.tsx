@@ -206,7 +206,7 @@ export function ComparePage() {
                 <b>{(overlap.overlap * 100).toFixed(1)}% of top-10 holdings overlap</b>
               </p>
               <p className="muted small">
-                {overlap.shared.length ? `Shared: ${overlap.shared.join(', ')}` : 'No shared names among the top 10.'} Yahoo
+                {overlap.shared.length ? `Shared: ${overlap.shared.join(', ')}.` : 'No shared names among the top 10.'} Yahoo
                 lists only each fund's top 10 holdings.
               </p>
             </section>
