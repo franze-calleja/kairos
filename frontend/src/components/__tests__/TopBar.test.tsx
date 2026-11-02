@@ -26,3 +26,10 @@ test('search uses the same ticker form as the backend', async () => {
   await userEvent.type(input, 'brk.b{Enter}')
   expect(useSelection.getState().selected).toBe('BRK-B')
 })
+
+test('clicking the logo returns to the overview', async () => {
+  useSelection.getState().select('NVDA')
+  renderWithClient(<TopBar />)
+  await userEvent.click(screen.getByRole('button', { name: 'Kairos home' }))
+  expect(useSelection.getState().selected).toBeNull()
+})

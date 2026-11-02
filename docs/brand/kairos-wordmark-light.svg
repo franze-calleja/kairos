@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 96" width="360" height="96">
+  <title>kairos — seize the moment</title>
+  <g transform="translate(8 8) scale(1.25)">
+    <path d="M14 50 C10 30 22 12 40 12 C52 12 56 24 48 30 C42 35 33 30 36 24 C38 20 44 21 44 25" fill="none" stroke="#b45309" stroke-width="7" stroke-linecap="round"/>
+  </g>
+  <text x="104" y="56" font-family="'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif" font-size="48" fill="#1c1917">kairos</text>
+  <text x="106" y="80" font-family="'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif" font-size="15" font-style="italic" fill="#78716c">seize the moment</text>
+</svg>

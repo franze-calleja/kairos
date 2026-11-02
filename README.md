@@ -1,6 +1,13 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/kairos-wordmark-dark.svg">
+    <img src="docs/brand/kairos-wordmark-light.svg" alt="kairos — seize the moment" width="360">
+  </picture>
+</p>
+
 # Kairos
 
-*Greek: "the right moment."*
+*Greek: "the right moment."* In myth, Kairos has a single lock of hair on his forehead: you seize the moment by the forelock while it is in front of you. That lock is the logo.
 
 Kairos is a self-hosted, AI-assisted research tool for US stocks and ETFs. For any ticker it reads recent news, SEC filings and market data and gives you a short, **sourced reading**:
 
