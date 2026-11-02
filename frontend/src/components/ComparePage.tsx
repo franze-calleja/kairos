@@ -154,6 +154,8 @@ export function ComparePage() {
         </div>
       </section>
       {same && <p className="notice">Pick two different tickers.</p>}
+      {!ta && !tb && <p className="notice">Enter two tickers to compare them side by side.</p>}
+      {!!ta !== !!tb && <p className="notice">Enter a second ticker to compare.</p>}
       {[ra, rb].map((q, i) =>
         q.isError ? (
           <p key={i} className="error-box">

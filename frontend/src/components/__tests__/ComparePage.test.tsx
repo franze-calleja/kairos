@@ -69,3 +69,15 @@ test('same ticker twice asks for two different tickers', () => {
   renderWithClient(<ComparePage />)
   expect(screen.getByText('Pick two different tickers.')).toBeInTheDocument()
 })
+
+test('with only one ticker the page explains what to do next', async () => {
+  serve({ QQQ: etf('QQQ', 0.002, []) })
+  useSelection.setState({ compare: ['QQQ', null] })
+  renderWithClient(<ComparePage />)
+  expect(await screen.findByText('Enter a second ticker to compare.')).toBeInTheDocument()
+})
+
+test('with no tickers the page explains what to do', () => {
+  renderWithClient(<ComparePage />)
+  expect(screen.getByText('Enter two tickers to compare them side by side.')).toBeInTheDocument()
+})
