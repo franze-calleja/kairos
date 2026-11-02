@@ -42,12 +42,11 @@ def test_quick_numbers_etf():
     assert q.trailing_pe is None
 
 
-def test_quick_numbers_etf_prefers_fund_overview():
-    q = build_quick_numbers(
-        "etf", {"quoteType": "ETF"}, [], {"expense_ratio": 0.0003, "aum": 1e12}, None
-    )
+def test_quick_numbers_etf_expense_prefers_fund_overview_aum_from_info():
+    info = {"quoteType": "ETF", "totalAssets": 4.99e11}
+    q = build_quick_numbers("etf", info, [], {"expense_ratio": 0.0003, "aum": 787282.2}, None)
     assert q.expense_ratio == 0.0003
-    assert q.aum == 1e12
+    assert q.aum == 4.99e11  # fund_operations "Total Net Assets" uses other units; ignore it
 
 
 def test_sector_pe_reference(tmp_path):

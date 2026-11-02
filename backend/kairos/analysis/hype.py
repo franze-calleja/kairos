@@ -64,8 +64,14 @@ def compute_hype(
     spike_pct = (last / float(closes.iloc[-6]) - 1) * 100 if len(closes) >= 6 else None
     avg_vol = float(volumes.iloc[-30:].mean()) if len(volumes) else None
 
+    if is_etf:
+        attention = HypeFlag(
+            code="attention_spike_no_substance", triggered=False, value="not applicable to ETFs"
+        )
+    else:
+        attention = _attention(settings, news, substantive_news, today)
     return [
-        _attention(settings, news, substantive_news, today),
+        attention,
         HypeFlag(
             code="micro_cap",
             triggered=size is not None and float(size) < settings.micro_cap_usd,

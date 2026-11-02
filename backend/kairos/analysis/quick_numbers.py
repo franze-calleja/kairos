@@ -38,7 +38,7 @@ def build_quick_numbers(
             kind="etf",
             expense_ratio=fund.get("expense_ratio")
             or (info_expense / 100 if info_expense is not None else None),
-            aum=fund.get("aum") or _num(info.get("totalAssets")),
+            aum=_num(info.get("totalAssets")),
             top_holdings=holdings,
         )
     return QuickNumbers(

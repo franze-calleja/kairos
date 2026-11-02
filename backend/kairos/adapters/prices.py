@@ -60,13 +60,10 @@ def _fund_overview(etf: str) -> dict[str, float | None]:
     out: dict[str, float | None] = {"expense_ratio": None, "aum": None}
     if ops is not None and not ops.empty:
         col = ops.columns[0]
-        for label, key in (
-            ("Annual Report Expense Ratio", "expense_ratio"),
-            ("Total Net Assets", "aum"),
-        ):
-            if label in ops.index:
-                value = ops.loc[label, col]
-                out[key] = float(value) if pd.notna(value) else None
+        # "Total Net Assets" here is not in dollars; AUM comes from info["totalAssets"] instead.
+        if "Annual Report Expense Ratio" in ops.index:
+            value = ops.loc["Annual Report Expense Ratio", col]
+            out["expense_ratio"] = float(value) if pd.notna(value) else None
     return out
 
 

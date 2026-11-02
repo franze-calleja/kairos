@@ -1,14 +1,19 @@
 import sqlite3
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 
-from kairos.api.deps import get_conn
+from kairos.api.deps import get_app_settings, get_conn
+from kairos.config import Settings
+from kairos.models import Reading
 from kairos.services.lists import ListName, add_ticker, list_tickers, remove_ticker
+from kairos.services.readings import DataUnavailable, UnknownTicker, get_reading
 
 router = APIRouter(prefix="/api")
 Conn = Annotated[sqlite3.Connection, Depends(get_conn)]
+AppSettings = Annotated[Settings, Depends(get_app_settings)]
 
 
 class TickerIn(BaseModel):
@@ -60,3 +65,17 @@ def delete_list(name: ListName, ticker: str, conn: Conn) -> Response:
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
     return Response(status_code=204)
+
+
+@router.get("/readings/{ticker}")
+async def get_reading_route(
+    ticker: str, conn: Conn, settings: AppSettings, refresh: bool = False
+) -> Reading:
+    try:
+        return await get_reading(settings, conn, ticker, datetime.now(UTC), refresh=refresh)
+    except UnknownTicker as e:
+        raise HTTPException(status_code=404, detail=f"Unknown ticker: {e}") from e
+    except DataUnavailable as e:
+        raise HTTPException(status_code=503, detail=f"Market data unavailable: {e}") from e
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e

@@ -79,3 +79,13 @@ def test_no_price_data_does_not_crash(settings):
     flags = compute_hype(settings, NVDA_INFO, None, [], True, TODAY)
     assert [f.code for f in flags] == ORDER
     assert triggered(flags) == set()
+
+
+def test_attention_not_applicable_to_etfs(settings):
+    info = {"quoteType": "ETF", "totalAssets": 5e11, "exchange": "NMS"}
+    items = news([0] * 20)
+    flags = compute_hype(settings, info, make_df([50.0] * 60, volume=1e7), items, False, TODAY)
+    flag = flags[0]
+    assert flag.code == "attention_spike_no_substance"
+    assert not flag.triggered
+    assert flag.value == "not applicable to ETFs"
