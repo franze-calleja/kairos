@@ -65,8 +65,21 @@ def set_meta(conn: sqlite3.Connection, key: str, value: str) -> None:
     conn.commit()
 
 
+# Columns added after v1; existing databases get them on startup.
+_ADDED_COLUMNS = {"lists": {"shares": "REAL", "thesis": "TEXT"}}
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    for table, columns in _ADDED_COLUMNS.items():
+        existing = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+        for name, sql_type in columns.items():
+            if name not in existing:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {sql_type}")
+
+
 def init_db(conn: sqlite3.Connection, settings: Settings) -> None:
     conn.executescript(SCHEMA)
+    _migrate(conn)
     if get_meta(conn, "seeded") is None:
         from kairos.services.lists import add_ticker
 

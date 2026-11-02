@@ -14,7 +14,14 @@ from kairos.db import get_meta
 from kairos.models import Reading
 from kairos.services import scheduler
 from kairos.services.discover import latest_discover
-from kairos.services.lists import ListName, add_ticker, list_tickers, remove_ticker
+from kairos.services.lists import (
+    ListName,
+    add_ticker,
+    list_tickers,
+    remove_ticker,
+    set_shares,
+    set_thesis,
+)
 from kairos.services.readings import DataUnavailable, UnknownTicker, get_reading
 from kairos.services.track_record import stats
 from kairos.tickers import normalize_ticker
@@ -42,9 +49,23 @@ class ListEntry(BaseModel):
     next_earnings: str | None = None
     hype_warning: bool | None = None
     updated_at: str | None = None
+    shares: float | None = None
+    thesis: str | None = None
+    thesis_verdict: str | None = None
 
 
-def _entry(conn: sqlite3.Connection, ticker: str) -> ListEntry:
+def _entry(conn: sqlite3.Connection, ticker: str, name: ListName | None = None) -> ListEntry:
+    mine = None
+    if name:
+        mine = conn.execute(
+            "SELECT shares, thesis FROM lists WHERE list_name = ? AND ticker = ?", (name, ticker)
+        ).fetchone()
+    extra = {"shares": mine["shares"], "thesis": mine["thesis"]} if mine else {}
+    entry = _summary(conn, ticker)
+    return entry.model_copy(update=extra)
+
+
+def _summary(conn: sqlite3.Connection, ticker: str) -> ListEntry:
     row = conn.execute(
         "SELECT lean, ai_status, payload FROM readings WHERE ticker = ? "
         "ORDER BY created_at DESC, id DESC LIMIT 1",
@@ -79,7 +100,7 @@ def health() -> dict[str, str]:
 @router.get("/lists")
 def get_lists(conn: Conn) -> dict[str, list[ListEntry]]:
     return {
-        name: [_entry(conn, t) for t in list_tickers(conn, name)]
+        name: [_entry(conn, t, name) for t in list_tickers(conn, name)]
         for name in ("holdings", "watching")
     }
 
@@ -93,7 +114,7 @@ async def post_list(name: ListName, body: TickerIn, conn: Conn) -> ListEntry:
     _, status = await get_info(symbol)
     if status.detail == "unknown ticker":  # a Yahoo outage doesn't block adding
         raise HTTPException(status_code=422, detail=f"Unknown ticker: {symbol}")
-    return _entry(conn, add_ticker(conn, name, symbol))
+    return _entry(conn, add_ticker(conn, name, symbol), name)
 
 
 @router.delete("/lists/{name}/{ticker}", status_code=204)
@@ -174,3 +195,35 @@ async def post_morning_job(settings: AppSettings) -> dict[str, str]:
     _background.add(task)
     task.add_done_callback(_background.discard)
     return {"status": "started"}
+
+
+class SharesIn(BaseModel):
+    shares: float | None = None
+
+
+class ThesisIn(BaseModel):
+    thesis: str | None = None
+
+
+@router.put("/lists/holdings/{ticker}/shares")
+def put_shares(ticker: str, body: SharesIn, conn: Conn) -> ListEntry:
+    try:
+        set_shares(conn, ticker, body.shares)
+    except KeyError as e:
+        raise HTTPException(
+            status_code=404, detail=f"{ticker.upper()} is not in your holdings"
+        ) from e
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    return _entry(conn, normalize_ticker(ticker), "holdings")
+
+
+@router.put("/lists/{name}/{ticker}/thesis")
+def put_thesis(name: ListName, ticker: str, body: ThesisIn, conn: Conn) -> ListEntry:
+    try:
+        set_thesis(conn, name, ticker, body.thesis)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=f"{ticker.upper()} is not in {name}") from e
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    return _entry(conn, normalize_ticker(ticker), name)

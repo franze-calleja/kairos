@@ -51,3 +51,30 @@ def test_track_record_normalizes_ticker(client, conn):
     conn.commit()
     body = client.get("/api/track-record", params={"ticker": "brk.b"}).json()
     assert body["by_lean"]["bullish"]["1"]["n"] == 1
+
+
+def test_put_shares_roundtrip(client):
+    client.post("/api/lists/holdings", json={"ticker": "NVDA"})
+    r = client.put("/api/lists/holdings/nvda/shares", json={"shares": 12.5})
+    assert r.status_code == 200
+    assert r.json()["shares"] == 12.5
+    assert client.get("/api/lists").json()["holdings"][0]["shares"] == 12.5
+
+
+def test_put_shares_not_in_holdings_404(client):
+    assert client.put("/api/lists/holdings/AAPL/shares", json={"shares": 1}).status_code == 404
+
+
+def test_put_shares_negative_422(client):
+    client.post("/api/lists/holdings", json={"ticker": "NVDA"})
+    assert client.put("/api/lists/holdings/NVDA/shares", json={"shares": -2}).status_code == 422
+
+
+def test_put_thesis_roundtrip_and_limit(client):
+    client.post("/api/lists/watching", json={"ticker": "SMH"})
+    r = client.put("/api/lists/watching/SMH/thesis", json={"thesis": " Chip demand keeps growing "})
+    assert r.status_code == 200 and r.json()["thesis"] == "Chip demand keeps growing"
+    assert (
+        client.put("/api/lists/watching/SMH/thesis", json={"thesis": "x" * 201}).status_code == 422
+    )
+    assert client.put("/api/lists/holdings/SMH/thesis", json={"thesis": "x"}).status_code == 404
