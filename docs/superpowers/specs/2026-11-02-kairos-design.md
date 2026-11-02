@@ -53,6 +53,7 @@ Kairos exists to answer three recurring questions quickly and with evidence:
 - **Hosting order (owner):** Mac first, VPS later. Design must not block a later VPS move (config via env, data in a mounted volume, single port behind a reverse proxy).
 - **Gemini free-tier limits** are modest and change over time (roughly 10–15 requests/min, a few hundred to ~1,500/day for Flash models, per third-party reports; check AI Studio for real numbers). Kairos must budget requests and degrade gracefully on HTTP 429.
 - **Free-tier data use:** Google may use free-tier prompts to improve products. Only public market data goes into prompts; **the owner's holdings/quantities are never sent to Gemini** (designer's call).
+- **Open source (owner):** the repo will be public. No secrets, personal data or cached market data in git: `.env` and `data/` (SQLite) are gitignored; a secret scanner (e.g., gitleaks) runs as a pre-commit hook; initial holdings/watchlist are seeded from env (`KAIROS_SEED_HOLDINGS`, empty by default), not hard-coded. License: MIT (designer's recommendation; owner may choose AGPL). README carries a "research tool, not financial advice" disclaimer and documents that each user supplies their own free API keys.
 - **Versions:** latest stable libraries, LTS runtimes, avoid day-one majors; commit lockfiles (owner's global policy).
 
 ## 4. How it gets made
@@ -123,7 +124,7 @@ v1 suggestions come from:
 Each suggestion shows *why* it was suggested. (Designer's call: the spike scan uses only Finnhub article counts, no Gemini, paced under Finnhub's free per-minute limit; for a ~600-ticker universe this takes several minutes in the morning job, which is acceptable.) Discover runs on the morning schedule, not on every page load, and must respect the Gemini budget (suggestions are ranked in code; full readings only generated when the owner clicks).
 
 ### 5.8 Watchlist and holdings
-The owner manages two lists in the UI: **Holdings** (the owner's current positions) and **Watching**. v1 stores tickers only; quantities are optional and never leave the machine.
+The owner manages two lists in the UI: **Holdings** (seeded from `KAIROS_SEED_HOLDINGS`) and **Watching**. v1 stores tickers only; quantities are optional and never leave the machine.
 
 ## 6. Later (owner agreed — not in v1)
 1. Thesis notes: one line per holding; Kairos flags news that contradicts it.
