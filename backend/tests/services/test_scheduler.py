@@ -34,7 +34,7 @@ class Calls:
         self.outcomes += 1
         return 3
 
-    async def run_discover(self, settings, conn, now):
+    async def run_discover(self, settings, conn, now, on_progress=None):
         self.discover += 1
         return [1, 2]
 
@@ -183,3 +183,36 @@ async def test_scheduler_checks_every_five_minutes_starting_now(manila_settings)
         assert job.next_run_time <= datetime.now(UTC) + timedelta(seconds=5)
     finally:
         sched.shutdown(wait=False)
+
+
+def test_status_idle_by_default():
+    status = scheduler.job_status()
+    assert status["running"] is False
+    assert status["phase"] is None
+
+
+async def test_morning_job_reports_progress(settings, conn, calls, monkeypatch):
+    seen = []
+    c = calls(Calls())
+
+    async def record(settings, conn, ticker, now, refresh=False):
+        seen.append({k: scheduler.job_status()[k] for k in ("phase", "done", "total", "current")})
+        return SimpleNamespace(ai_status="ok")
+
+    async def discover(settings, conn, now, on_progress=None):
+        on_progress(120, 503)
+        seen.append({k: scheduler.job_status()[k] for k in ("phase", "done", "total")})
+        return []
+
+    monkeypatch.setattr(scheduler, "get_reading", record)
+    monkeypatch.setattr(scheduler, "run_discover", discover)
+    add_ticker(conn, "holdings", "AAA")
+    add_ticker(conn, "holdings", "BBB")
+    await scheduler.morning_job(settings, conn, NOW)
+    assert seen == [
+        {"phase": "readings", "done": 0, "total": 2, "current": "AAA"},
+        {"phase": "readings", "done": 1, "total": 2, "current": "BBB"},
+        {"phase": "discover", "done": 120, "total": 503},
+    ]
+    assert scheduler.job_status()["phase"] is None
+    assert c.outcomes == 1

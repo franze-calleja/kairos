@@ -125,6 +125,11 @@ def get_settings_route(conn: Conn, settings: AppSettings) -> dict:
 _background: set[asyncio.Task] = set()
 
 
+@router.get("/jobs/morning")
+def get_morning_job(conn: Conn) -> dict:
+    return {**scheduler.job_status(), "last_run": get_meta(conn, "last_morning_run")}
+
+
 @router.post("/jobs/morning", status_code=202)
 async def post_morning_job(settings: AppSettings) -> dict[str, str]:
     if scheduler.job_is_running():

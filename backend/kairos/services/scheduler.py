@@ -24,6 +24,8 @@ from kairos.services.track_record import fill_outcomes
 log = logging.getLogger(__name__)
 CHECK_EVERY_SECONDS = 300
 _running = False  # one morning run at a time: make-up check and manual button share this
+_IDLE = {"phase": None, "done": 0, "total": 0, "current": None, "started_at": None}
+_status: dict = dict(_IDLE)
 
 
 def _now() -> datetime:
@@ -32,6 +34,15 @@ def _now() -> datetime:
 
 def job_is_running() -> bool:
     return _running
+
+
+def job_status() -> dict:
+    """Progress of the current morning run, for the UI to poll."""
+    return {**_status, "running": _running}
+
+
+def _set(**fields: object) -> None:
+    _status.update(fields)
 
 
 def due_for_makeup(settings: Settings, conn: sqlite3.Connection, now: datetime) -> bool:
@@ -50,33 +61,43 @@ async def morning_job(settings: Settings, conn: sqlite3.Connection, now: datetim
     # Recorded first, so a run that crashes part-way is not retried every few minutes.
     set_meta(conn, "last_morning_attempt", now.isoformat())
     tickers = sorted(set(list_tickers(conn, "holdings")) | set(list_tickers(conn, "watching")))
-    active = settings
-    budget = RequestBudget(conn, settings.gemini_rpm, settings.gemini_rpd, settings.tz)
-    refreshed, failed = 0, []
-    for ticker in tickers:
-        try:
-            reading = await get_reading(active, conn, ticker, _now(), refresh=True)
-        except Exception as e:  # one bad ticker must not stop the morning run
-            log.warning("morning refresh failed for %s: %s", ticker, e)
-            failed.append(ticker)
-            continue
-        refreshed += 1
-        if (
-            reading.ai_status == "budget_exhausted"
-            and active.gemini_rpd != 0
-            and budget.day_exhausted(_now())
-        ):
-            # Daily budget used up: remaining tickers still get computed-only readings.
-            active = settings.model_copy(update={"gemini_rpd": 0})
-    outcomes = await fill_outcomes(settings, conn, now)
-    discover = await run_discover(settings, conn, now)
-    set_meta(conn, "last_morning_run", now.isoformat())
-    return {
-        "refreshed": refreshed,
-        "failed": failed,
-        "outcomes": outcomes,
-        "discover": len(discover),
-    }
+    _set(phase="readings", done=0, total=len(tickers), current=None, started_at=now.isoformat())
+    try:
+        active = settings
+        budget = RequestBudget(conn, settings.gemini_rpm, settings.gemini_rpd, settings.tz)
+        refreshed, failed = 0, []
+        for i, ticker in enumerate(tickers):
+            _set(done=i, current=ticker)
+            try:
+                reading = await get_reading(active, conn, ticker, _now(), refresh=True)
+            except Exception as e:  # one bad ticker must not stop the morning run
+                log.warning("morning refresh failed for %s: %s", ticker, e)
+                failed.append(ticker)
+                continue
+            refreshed += 1
+            if (
+                reading.ai_status == "budget_exhausted"
+                and active.gemini_rpd != 0
+                and budget.day_exhausted(_now())
+            ):
+                # Daily budget used up: remaining tickers still get computed-only readings.
+                active = settings.model_copy(update={"gemini_rpd": 0})
+        _set(phase="outcomes", done=len(tickers), current=None)
+        outcomes = await fill_outcomes(settings, conn, now)
+        _set(phase="discover", done=0, total=0)
+        discover = await run_discover(
+            settings, conn, now, on_progress=lambda done, total: _set(done=done, total=total)
+        )
+        set_meta(conn, "last_morning_run", now.isoformat())
+        return {
+            "refreshed": refreshed,
+            "failed": failed,
+            "outcomes": outcomes,
+            "discover": len(discover),
+        }
+    finally:
+        _status.clear()
+        _status.update(_IDLE)
 
 
 async def run_morning_job(settings: Settings, now: datetime | None = None) -> dict | None:

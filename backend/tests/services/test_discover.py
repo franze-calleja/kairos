@@ -107,3 +107,14 @@ def test_universe_file_sane():
     assert len(tickers) >= 500
     assert {"NVDA", "AAPL", "BRK-B"} <= set(tickers)
     assert len(tickers) == len(set(tickers))
+
+
+async def test_spike_scan_reports_progress(settings, conn, fake):
+    settings.finnhub_api_key = "k"
+    fake(Fake(), universe=("AAA", "BBB", "CCC"))
+    calls = []
+    await run_discover(
+        settings, conn, NOW, on_progress=lambda done, total: calls.append((done, total))
+    )
+    assert calls[-1] == (3, 3)
+    assert calls[0][1] == 3

@@ -1,6 +1,7 @@
 """Discover: tickers worth a look — unusual news spikes and funds/stocks similar to holdings."""
 
 import sqlite3
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -35,11 +36,19 @@ def spike_score(daily_counts: list[int]) -> float:
     return recent / (baseline + 0.5)
 
 
-async def _spikes(settings: Settings, owned: set[str], now: datetime) -> list[dict]:
+ProgressFn = Callable[[int, int], None]
+
+
+async def _spikes(
+    settings: Settings, owned: set[str], now: datetime, on_progress: ProgressFn | None = None
+) -> list[dict]:
     today = now.date()
     found = []
+    universe = load_list(UNIVERSE_PATH)
     async with make_http_client() as client:
-        for ticker in load_list(UNIVERSE_PATH):
+        for i, ticker in enumerate(universe, 1):
+            if on_progress:
+                on_progress(i, len(universe))
             if ticker in owned:
                 continue
             result = await company_news(client, settings, ticker, SCAN_DAYS, today=today)
@@ -101,11 +110,16 @@ async def _similar(owned: set[str], held: list[str]) -> list[dict]:
     return out
 
 
-async def run_discover(settings: Settings, conn: sqlite3.Connection, now: datetime) -> list[dict]:
+async def run_discover(
+    settings: Settings,
+    conn: sqlite3.Connection,
+    now: datetime,
+    on_progress: ProgressFn | None = None,
+) -> list[dict]:
     held = list_tickers(conn, "holdings")
     owned = set(held) | set(list_tickers(conn, "watching"))
     if settings.finnhub_api_key:
-        spikes, scan = await _spikes(settings, owned, now), "ok"
+        spikes, scan = await _spikes(settings, owned, now, on_progress), "ok"
     else:
         spikes, scan = [], "not_configured"
     best: dict[str, dict] = {}

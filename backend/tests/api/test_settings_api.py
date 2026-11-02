@@ -33,3 +33,9 @@ def test_jobs_morning_accepted(client, monkeypatch):
 def test_jobs_morning_conflict(client, monkeypatch):
     monkeypatch.setattr(scheduler, "_running", True)
     assert client.post("/api/jobs/morning").status_code == 409
+
+
+def test_job_status_endpoint(client):
+    body = client.get("/api/jobs/morning").json()
+    assert body["running"] is False
+    assert set(body) >= {"running", "phase", "done", "total", "current", "last_run"}
