@@ -24,6 +24,7 @@ class NewsItem(BaseModel):
     published_at: datetime
     related_ticker: str
     weight: float = 1.0
+    outlet: str | None = None  # publisher shown to the user, e.g. "Reuters"
 
 
 class AdapterResult[T](BaseModel):

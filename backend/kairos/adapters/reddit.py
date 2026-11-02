@@ -39,6 +39,7 @@ async def mentions(
                         url=e.link,
                         published_at=_published(e),
                         related_ticker=ticker,
+                        outlet=f"r/{sub}",
                     )
     except (httpx.HTTPError, ValueError, AttributeError) as e:
         return AdapterResult[NewsItem](

@@ -30,6 +30,7 @@ async def test_finnhub_parses_and_ids(settings):
     assert first.source == "finnhub"
     assert first.id == hashlib.sha1(first.url.encode()).hexdigest()[:10]
     assert first.related_ticker == "NVDA"
+    assert first.outlet == "Reuters"
 
 
 @respx.mock
@@ -78,6 +79,9 @@ async def test_google_news_rss_parse():
     assert res.items[0].published_at.year == 2026
     assert res.items[0].source == "google_news"
     assert "<a" not in res.items[0].summary
+    assert res.items[0].outlet == "MarketWatch"  # from <source>
+    assert res.items[1].outlet == "Motley Fool"  # from the " - Outlet" title suffix
+    assert res.items[1].title == "Why Nvidia shares are moving today"
 
 
 @respx.mock
@@ -97,6 +101,7 @@ async def test_sec_filters_forms_and_window(settings):
         "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000101/nvda-8k.htm"
     ]
     assert res.items[0].title == "8-K filing"
+    assert res.items[0].outlet == "SEC EDGAR"
 
 
 @respx.mock
@@ -136,6 +141,7 @@ async def test_reddit_enabled_parses(settings, monkeypatch):
     assert res.status.status == "ok"
     assert len(res.items) == 1  # same post from 3 subs is deduped by URL
     assert res.items[0].source == "reddit"
+    assert res.items[0].outlet == "r/stocks"
 
 
 @respx.mock

@@ -23,5 +23,14 @@ def test_reading_ok_and_lists_show_latest_lean(client, src):
     r = client.get("/api/readings/nvda")
     assert r.status_code == 200
     assert r.json()["ticker"] == "NVDA"
-    holdings = client.get("/api/lists").json()["holdings"]
-    assert holdings == [{"ticker": "NVDA", "lean": "bullish", "ai_status": "ok"}]
+    (entry,) = client.get("/api/lists").json()["holdings"]
+    assert entry["ticker"] == "NVDA"
+    assert entry["lean"] == "bullish" and entry["ai_status"] == "ok"
+    assert entry["name"] == "NVIDIA Corporation"
+    assert entry["kind"] == "stock"
+    assert entry["price"] == 100.0
+    assert entry["day_change_pct"] == 0.0
+    assert entry["price_label"] == "near_average"
+    assert entry["next_earnings"] is None
+    assert entry["hype_warning"] is False
+    assert entry["updated_at"] is not None

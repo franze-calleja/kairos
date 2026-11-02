@@ -68,6 +68,7 @@ async def recent_filings(
                     url=url,
                     published_at=datetime(filed_on.year, filed_on.month, filed_on.day, tzinfo=UTC),
                     related_ticker=ticker,
+                    outlet="SEC EDGAR",
                 )
             )
     except (httpx.HTTPError, ValueError, KeyError, TypeError) as e:

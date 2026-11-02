@@ -52,6 +52,7 @@ async def company_news(
                 url=a["url"],
                 published_at=datetime.fromtimestamp(a["datetime"], UTC),
                 related_ticker=ticker,
+                outlet=a.get("source") or None,
             )
             for a in (data or [])
             if a.get("url")

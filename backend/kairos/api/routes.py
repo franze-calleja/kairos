@@ -27,19 +27,46 @@ class TickerIn(BaseModel):
 
 
 class ListEntry(BaseModel):
+    """A sidebar/overview row: the ticker plus a summary of its latest reading."""
+
     ticker: str
     lean: str | None = None
     ai_status: str | None = None
+    name: str | None = None
+    kind: str | None = None
+    price: float | None = None
+    day_change_pct: float | None = None
+    price_label: str | None = None
+    next_earnings: str | None = None
+    hype_warning: bool | None = None
+    updated_at: str | None = None
 
 
 def _entry(conn: sqlite3.Connection, ticker: str) -> ListEntry:
     row = conn.execute(
-        "SELECT lean, ai_status FROM readings WHERE ticker = ? ORDER BY created_at DESC LIMIT 1",
+        "SELECT lean, ai_status, payload FROM readings WHERE ticker = ? "
+        "ORDER BY created_at DESC, id DESC LIMIT 1",
         (ticker,),
     ).fetchone()
     if row is None:
         return ListEntry(ticker=ticker)
-    return ListEntry(ticker=ticker, lean=row["lean"], ai_status=row["ai_status"])
+    reading = Reading.model_validate_json(row["payload"])
+    price = reading.price
+    return ListEntry(
+        ticker=ticker,
+        lean=row["lean"],
+        ai_status=row["ai_status"],
+        name=reading.name,
+        kind=reading.kind,
+        price=price.last_price if price else None,
+        day_change_pct=price.day_change_pct if price else None,
+        price_label=price.label if price else None,
+        next_earnings=reading.events.next_earnings.isoformat()
+        if reading.events.next_earnings
+        else None,
+        hype_warning=any(f.triggered for f in reading.hype),
+        updated_at=reading.created_at.isoformat(),
+    )
 
 
 @router.get("/health")
