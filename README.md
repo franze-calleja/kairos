@@ -57,7 +57,7 @@ All settings live in `.env` (see `.env.example` for the full list with comments)
 | `SEC_USER_AGENT` | — | Required by SEC EDGAR, e.g. `Kairos you@example.com` |
 | `REDDIT_ENABLED` | `false` | Optional low-volume Reddit RSS (see below) |
 | `TZ` | `UTC` | Your timezone (IANA name, e.g. `Asia/Manila`) |
-| `MORNING_REFRESH_TIME` | `07:00` | Daily automatic refresh of your lists, in `TZ` |
+| `MORNING_REFRESH_TIME` | `07:00` | Daily automatic refresh of your lists, in `TZ`. If your computer was asleep or Kairos wasn't running at that time, the refresh runs within about 5 minutes of waking or starting (once per day). |
 | `READING_CACHE_HOURS` | `4` | How long a reading is reused before it is rebuilt |
 | `NEWS_WINDOW_DAYS` | `7` | Days of news read per ticker |
 | `KAIROS_SEED_HOLDINGS` / `KAIROS_SEED_WATCHING` | empty | Comma-separated tickers to pre-fill lists on first start |

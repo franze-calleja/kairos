@@ -3,7 +3,7 @@ import sqlite3
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 
 from kairos.ai.budget import RequestBudget
@@ -126,19 +126,10 @@ _background: set[asyncio.Task] = set()
 
 
 @router.post("/jobs/morning", status_code=202)
-async def post_morning_job(request: Request, settings: AppSettings) -> dict[str, str]:
-    state = request.app.state
-    if state.job_running:
+async def post_morning_job(settings: AppSettings) -> dict[str, str]:
+    if scheduler.job_is_running():
         raise HTTPException(status_code=409, detail="Morning refresh is already running")
-    state.job_running = True
-
-    async def run() -> None:
-        try:
-            await scheduler.run_morning_job(settings)
-        finally:
-            state.job_running = False
-
-    task = asyncio.create_task(run())
+    task = asyncio.create_task(scheduler.run_morning_job(settings))
     _background.add(task)
     task.add_done_callback(_background.discard)
     return {"status": "started"}

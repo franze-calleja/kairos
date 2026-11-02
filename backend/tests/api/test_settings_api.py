@@ -30,6 +30,6 @@ def test_jobs_morning_accepted(client, monkeypatch):
     assert client.post("/api/jobs/morning").status_code == 202
 
 
-def test_jobs_morning_conflict(client):
-    client.app.state.job_running = True
+def test_jobs_morning_conflict(client, monkeypatch):
+    monkeypatch.setattr(scheduler, "_running", True)
     assert client.post("/api/jobs/morning").status_code == 409

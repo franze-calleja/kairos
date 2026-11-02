@@ -32,7 +32,6 @@ def create_app(settings: Settings | None = None, static_dir: Path | None = None)
 
     app = FastAPI(title="Kairos", lifespan=lifespan)
     app.state.settings = settings
-    app.state.job_running = False
     app.include_router(router)
     _mount_frontend(app, static_dir or DEFAULT_STATIC)
     return app

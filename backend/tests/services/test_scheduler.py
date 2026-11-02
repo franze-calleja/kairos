@@ -1,9 +1,10 @@
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
+from zoneinfo import ZoneInfo
 
 import pytest
 
-from kairos.db import get_meta
+from kairos.db import get_meta, set_meta
 from kairos.services import scheduler
 from kairos.services.lists import add_ticker
 
@@ -104,10 +105,81 @@ async def test_morning_job_uses_fresh_clock_per_ticker(settings, conn, calls, mo
     assert len(set(seen)) == 2
 
 
-def test_start_scheduler_uses_time_and_tz(settings):
-    settings.morning_refresh_time, settings.tz = "06:45", "Asia/Manila"
-    sched = scheduler.build_scheduler(settings)
-    job = sched.get_jobs()[0]
-    assert str(job.trigger.timezone) == "Asia/Manila"
-    fields = {f.name: str(f) for f in job.trigger.fields}
-    assert fields["hour"] == "6" and fields["minute"] == "45"
+MANILA = ZoneInfo("Asia/Manila")
+
+
+def manila(day, hour, minute=0):
+    return datetime(2026, 11, day, hour, minute, tzinfo=MANILA)
+
+
+@pytest.fixture
+def manila_settings(settings):
+    settings.tz, settings.morning_refresh_time = "Asia/Manila", "07:00"
+    return settings
+
+
+def test_not_due_before_refresh_time(manila_settings, conn):
+    assert scheduler.due_for_makeup(manila_settings, conn, manila(3, 6, 59)) is False
+
+
+def test_due_after_refresh_time_when_never_run(manila_settings, conn):
+    assert scheduler.due_for_makeup(manila_settings, conn, manila(3, 8, 0)) is True
+
+
+def test_due_when_last_attempt_was_yesterday(manila_settings, conn):
+    set_meta(conn, "last_morning_attempt", manila(2, 7, 0).isoformat())
+    assert scheduler.due_for_makeup(manila_settings, conn, manila(3, 9, 30)) is True
+
+
+def test_not_due_when_already_attempted_after_refresh_time(manila_settings, conn):
+    set_meta(conn, "last_morning_attempt", manila(3, 7, 2).isoformat())
+    assert scheduler.due_for_makeup(manila_settings, conn, manila(3, 23, 0)) is False
+
+
+def test_due_compares_in_local_time(manila_settings, conn):
+    # 07:30 Manila on Nov 3 is 23:30 UTC on Nov 2 — "today" must mean the Manila day.
+    set_meta(conn, "last_morning_attempt", manila(2, 7, 0).isoformat())
+    now_utc = datetime(2026, 11, 2, 23, 30, tzinfo=UTC)
+    assert scheduler.due_for_makeup(manila_settings, conn, now_utc) is True
+
+
+async def test_morning_job_records_attempt_at_start(settings, conn, calls):
+    calls(Calls(fail={"BAD"}))
+    add_ticker(conn, "holdings", "BAD")
+    await scheduler.morning_job(settings, conn, NOW)
+    assert get_meta(conn, "last_morning_attempt") == NOW.isoformat()
+
+
+async def test_makeup_tick_runs_once_per_day(manila_settings, monkeypatch):
+    runs = []
+
+    async def fake_job(settings, conn, now):
+        runs.append(now)
+        set_meta(conn, "last_morning_attempt", now.isoformat())
+        return {"refreshed": 0}
+
+    monkeypatch.setattr(scheduler, "morning_job", fake_job)
+    from kairos.db import connect, init_db
+
+    init_db(connect(manila_settings.db_path), manila_settings)
+    assert await scheduler.makeup_tick(manila_settings, manila(3, 6, 0)) is None
+    assert await scheduler.makeup_tick(manila_settings, manila(3, 8, 0)) == {"refreshed": 0}
+    assert await scheduler.makeup_tick(manila_settings, manila(3, 8, 5)) is None
+    assert len(runs) == 1
+
+
+async def test_run_morning_job_skips_when_already_running(settings, monkeypatch):
+    monkeypatch.setattr(scheduler, "_running", True)
+    assert await scheduler.run_morning_job(settings) is None
+
+
+async def test_scheduler_checks_every_five_minutes_starting_now(manila_settings):
+    sched = scheduler.build_scheduler(manila_settings)
+    sched.start(paused=True)
+    try:
+        (job,) = sched.get_jobs()
+        assert job.id == "morning-makeup"
+        assert job.trigger.interval.total_seconds() == 300
+        assert job.next_run_time <= datetime.now(UTC) + timedelta(seconds=5)
+    finally:
+        sched.shutdown(wait=False)
