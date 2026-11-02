@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from kairos.api.deps import get_app_settings, get_conn
 from kairos.config import Settings
 from kairos.models import Reading
+from kairos.services.discover import latest_discover
 from kairos.services.lists import ListName, add_ticker, list_tickers, remove_ticker
 from kairos.services.readings import DataUnavailable, UnknownTicker, get_reading
 from kairos.services.track_record import stats
@@ -85,3 +86,8 @@ async def get_reading_route(
 @router.get("/track-record")
 def get_track_record(conn: Conn, ticker: str | None = None) -> dict:
     return stats(conn, ticker)
+
+
+@router.get("/discover")
+def get_discover(conn: Conn) -> dict:
+    return latest_discover(conn)
