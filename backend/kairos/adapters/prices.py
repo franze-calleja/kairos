@@ -38,7 +38,9 @@ def _top_holdings(etf: str) -> list[Holding]:
     if df is None or df.empty:
         return []
     return [
-        Holding(symbol=str(sym), name=str(row.get("Name", sym)), weight=float(row["Holding Percent"]))
+        Holding(
+            symbol=str(sym), name=str(row.get("Name", sym)), weight=float(row["Holding Percent"])
+        )
         for sym, row in df.iterrows()
     ]
 
@@ -58,7 +60,10 @@ def _fund_overview(etf: str) -> dict[str, float | None]:
     out: dict[str, float | None] = {"expense_ratio": None, "aum": None}
     if ops is not None and not ops.empty:
         col = ops.columns[0]
-        for label, key in (("Annual Report Expense Ratio", "expense_ratio"), ("Total Net Assets", "aum")):
+        for label, key in (
+            ("Annual Report Expense Ratio", "expense_ratio"),
+            ("Total Net Assets", "aum"),
+        ):
             if label in ops.index:
                 value = ops.loc[label, col]
                 out[key] = float(value) if pd.notna(value) else None

@@ -32,7 +32,9 @@ async def test_top_holdings_mapping(monkeypatch):
 
 
 async def test_unknown_ticker_status(monkeypatch):
-    monkeypatch.setattr(prices.yf, "Ticker", lambda s: FakeTicker(s, info={"trailingPegRatio": None}))
+    monkeypatch.setattr(
+        prices.yf, "Ticker", lambda s: FakeTicker(s, info={"trailingPegRatio": None})
+    )
     info, status = await prices.get_info("XYZQQ")
     assert info is None
     assert status.status == "error"
@@ -41,7 +43,9 @@ async def test_unknown_ticker_status(monkeypatch):
 
 async def test_known_ticker_info(monkeypatch):
     monkeypatch.setattr(
-        prices.yf, "Ticker", lambda s: FakeTicker(s, info={"quoteType": "EQUITY", "previousClose": 1.0})
+        prices.yf,
+        "Ticker",
+        lambda s: FakeTicker(s, info={"quoteType": "EQUITY", "previousClose": 1.0}),
     )
     info, status = await prices.get_info("NVDA")
     assert status.status == "ok"
