@@ -21,6 +21,7 @@ def test_prompt_has_ids_and_rules():
     assert "(finnhub, 2026-11-01, 0.09)" in prompt
     assert "only the listed articles" in prompt
     assert "not_enough_signal" in prompt
+    assert "takeaway" in prompt
     assert "180.0" in prompt
 
 

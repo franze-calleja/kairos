@@ -132,3 +132,17 @@ async def test_steady_heavy_news_is_not_a_spike(settings, conn, fake):
     fake(f, universe=("AVGO", "BUSY"))
     items = await run_discover(settings, conn, NOW)
     assert [i["ticker"] for i in items if i["reason"].startswith("news spike")] == ["AVGO"]
+
+
+async def test_other_share_classes_of_owned_companies_are_skipped(settings, conn, fake):
+    settings.finnhub_api_key = "k"
+    qqq = [
+        Holding(symbol="GOOG", name="Alphabet C", weight=0.03),
+        Holding(symbol="MSFT", name="Microsoft", weight=0.08),
+    ]
+    fake(Fake(spiking={"GOOG", "AVGO"}, holdings={"QQQ": qqq}), universe=("GOOG", "AVGO"))
+    add_ticker(conn, "holdings", "QQQ")
+    add_ticker(conn, "watching", "GOOGL")
+    tickers = [i["ticker"] for i in await run_discover(settings, conn, NOW)]
+    assert "GOOG" not in tickers
+    assert "AVGO" in tickers and "MSFT" in tickers

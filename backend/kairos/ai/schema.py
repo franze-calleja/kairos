@@ -16,3 +16,4 @@ class AISummary(BaseModel):
     drivers: list[Claim]
     bull_case: list[Claim]
     bear_case: list[Claim]
+    takeaway: Claim | None = None  # one-sentence synthesis shown at the top of a reading

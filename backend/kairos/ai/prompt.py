@@ -11,6 +11,8 @@ Rules:
 - Every claim (drivers, bull_case, bear_case) must cite the ids of the articles that support it
   in source_ids, using the ids exactly as shown in square brackets.
 - Give 2-5 drivers: the main things moving sentiment right now.
+- Write takeaway: one plain sentence (max 25 words) that sums up the overall picture for a
+  long-term investor, with the ids of the articles it rests on. Do not just repeat a driver.
 - Do not state any number that does not appear in the articles or in the computed data.
 - Set substantive_news=true only if the articles contain real company or fund developments
   (earnings, guidance, products, regulation, filings, analyst actions); false if they are mostly

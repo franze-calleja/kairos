@@ -96,6 +96,9 @@ async def summarize(
                 "bull_case": _valid(parsed.bull_case, allowed_ids),
                 "bear_case": _valid(parsed.bear_case, allowed_ids),
                 "not_enough_signal": parsed.not_enough_signal or not drivers,
+                "takeaway": next(iter(_valid([parsed.takeaway], allowed_ids)), None)
+                if parsed.takeaway
+                else None,
             }
         )
         return result, "ok"

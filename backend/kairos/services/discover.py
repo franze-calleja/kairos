@@ -20,6 +20,16 @@ MIN_RECENT = 5
 MIN_SPIKE_SCORE = 2.0  # recent news rate must be at least ~2x the ticker's usual rate
 TOP_SPIKES = 10
 MAX_SIMILAR_PER_HOLDING = 5
+# Share classes of the same company in the S&P 500: owning one means the others aren't "new".
+SHARE_CLASSES = [{"GOOG", "GOOGL"}, {"FOX", "FOXA"}, {"NWS", "NWSA"}, {"BRK-A", "BRK-B"}]
+
+
+def _with_share_classes(tickers: set[str]) -> set[str]:
+    out = set(tickers)
+    for group in SHARE_CLASSES:
+        if group & tickers:
+            out |= group
+    return out
 
 
 def load_list(path: Path) -> list[str]:
@@ -118,7 +128,7 @@ async def run_discover(
     on_progress: ProgressFn | None = None,
 ) -> list[dict]:
     held = list_tickers(conn, "holdings")
-    owned = set(held) | set(list_tickers(conn, "watching"))
+    owned = _with_share_classes(set(held) | set(list_tickers(conn, "watching")))
     if settings.finnhub_api_key:
         spikes, scan = await _spikes(settings, owned, now, on_progress), "ok"
     else:

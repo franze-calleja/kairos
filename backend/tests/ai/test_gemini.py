@@ -206,3 +206,30 @@ async def test_no_fallback_configured_retries_primary(monkeypatch, keyed, budget
     client = use(monkeypatch, FakeClient([overloaded(), overloaded(), overloaded()]))
     assert await gemini.summarize(keyed, budget, "p", {"a"}, NOW) == (None, "unavailable")
     assert client.models_used == [keyed.gemini_model] * 3
+
+
+async def test_takeaway_kept_when_cited_dropped_when_not(monkeypatch, keyed, budget):
+    use(
+        monkeypatch,
+        FakeClient(
+            [summary(takeaway=Claim(text="Guidance up, export risk lingers", source_ids=["a"]))]
+        ),
+    )
+    result, _ = await gemini.summarize(keyed, budget, "p", {"a"}, NOW)
+    assert result.takeaway.text == "Guidance up, export risk lingers"
+    use(monkeypatch, FakeClient([summary(takeaway=Claim(text="Made up", source_ids=["zzz"]))]))
+    result, _ = await gemini.summarize(keyed, budget, "p", {"a"}, NOW)
+    assert result.takeaway is None
+
+
+def test_old_summaries_without_takeaway_still_load():
+    old = {
+        "lean": "bullish",
+        "confidence": "low",
+        "not_enough_signal": False,
+        "substantive_news": True,
+        "drivers": [],
+        "bull_case": [],
+        "bear_case": [],
+    }
+    assert AISummary.model_validate(old).takeaway is None
