@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { Reading } from '../../api/schemas'
 import { Card } from './Card'
 
@@ -21,19 +22,30 @@ const CHECKS = {
 } as const
 
 export function HypeFlagsCard({ hype }: { hype: Reading['hype'] }) {
-  const sorted = [...hype].sort((a, b) => Number(b.triggered) - Number(a.triggered))
   const any = hype.some((f) => f.triggered)
+  const [open, setOpen] = useState(false)
+  const sorted = [...hype].sort((a, b) => Number(b.triggered) - Number(a.triggered))
+  const showList = any || open
   return (
     <Card title="Hype check" className={any ? 'card-warn' : ''}>
-      {!any && <p className="big-label ok">No warning signs</p>}
-      <ul className="flags">
-        {sorted.map((f) => (
-          <li key={f.code} className={f.triggered ? 'flag-on' : 'flag-off'}>
-            <span>{f.triggered ? `⚠︎ ${WARNINGS[f.code]}` : `✓ ${CHECKS[f.code]}`}</span>
-            <span className="muted small">{f.value}</span>
-          </li>
-        ))}
-      </ul>
+      {!any && (
+        <p className="big-label ok">
+          No warning signs{' '}
+          <button type="button" className="link-button small" aria-expanded={open} onClick={() => setOpen(!open)}>
+            {hype.length} checks passed {open ? '▾' : '▸'}
+          </button>
+        </p>
+      )}
+      {showList && (
+        <ul className="flags">
+          {sorted.map((f) => (
+            <li key={f.code} className={f.triggered ? 'flag-on' : 'flag-off'}>
+              <span>{f.triggered ? `⚠︎ ${WARNINGS[f.code]}` : `✓ ${CHECKS[f.code]}`}</span>
+              <span className="muted small">{f.value}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </Card>
   )
 }

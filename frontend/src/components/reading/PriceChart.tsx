@@ -1,7 +1,9 @@
 import { createChart, LineSeries } from 'lightweight-charts'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 type Point = { date: string; close: number }
+const RANGES = { '1M': 21, '6M': 126, '1Y': Infinity } as const
+type Range = keyof typeof RANGES
 
 function movingAverage(points: Point[], window: number) {
   const out: { time: string; value: number }[] = []
@@ -16,10 +18,16 @@ function movingAverage(points: Point[], window: number) {
 
 export function PriceChart({ history }: { history: Point[] }) {
   const ref = useRef<HTMLDivElement>(null)
+  const [range, setRange] = useState<Range>('1Y')
+
   useEffect(() => {
     if (!ref.current || history.length === 0) return
+    const visible = history.slice(-Math.min(RANGES[range], history.length))
+    const from = visible[0].date
+    // Averages use the full history, then get clipped to the visible window.
+    const clip = (pts: { time: string; value: number }[]) => pts.filter((p) => p.time >= from)
     const chart = createChart(ref.current, {
-      height: 220,
+      height: 240,
       autoSize: true,
       layout: { textColor: '#6b7280', attributionLogo: true },
       grid: { vertLines: { visible: false }, horzLines: { color: '#f3f4f6' } },
@@ -27,19 +35,31 @@ export function PriceChart({ history }: { history: Point[] }) {
       timeScale: { borderVisible: false },
     })
     chart.addSeries(LineSeries, { color: '#4f46e5', lineWidth: 2 }).setData(
-      history.map((p) => ({ time: p.date, value: p.close })),
+      visible.map((p) => ({ time: p.date, value: p.close })),
     )
-    chart.addSeries(LineSeries, { color: '#9ca3af', lineWidth: 1, priceLineVisible: false, lastValueVisible: false }).setData(movingAverage(history, 50))
-    chart.addSeries(LineSeries, { color: '#f59e0b', lineWidth: 1, priceLineVisible: false, lastValueVisible: false }).setData(movingAverage(history, 200))
+    const quiet = { lineWidth: 1, priceLineVisible: false, lastValueVisible: false } as const
+    chart.addSeries(LineSeries, { color: '#9ca3af', ...quiet }).setData(clip(movingAverage(history, 50)))
+    chart.addSeries(LineSeries, { color: '#f59e0b', ...quiet }).setData(clip(movingAverage(history, 200)))
     chart.timeScale().fitContent()
     return () => chart.remove()
-  }, [history])
+  }, [history, range])
+
   return (
     <div className="chart-wrap">
+      <div className="chart-top">
+        <p className="muted small legend">
+          <span className="dot dot-price" /> price <span className="dot dot-ma50" /> 50-day avg{' '}
+          <span className="dot dot-ma200" /> 200-day avg
+        </p>
+        <div className="ranges" role="group" aria-label="Chart period">
+          {(Object.keys(RANGES) as Range[]).map((r) => (
+            <button key={r} type="button" aria-pressed={range === r} onClick={() => setRange(r)}>
+              {r}
+            </button>
+          ))}
+        </div>
+      </div>
       <div ref={ref} className="chart" />
-      <p className="muted small legend">
-        <span className="dot dot-price" /> price <span className="dot dot-ma50" /> 50-day avg <span className="dot dot-ma200" /> 200-day avg
-      </p>
     </div>
   )
 }

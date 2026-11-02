@@ -8,6 +8,7 @@ export function TopBar() {
   const select = useSelection((s) => s.select)
   const setView = useSelection((s) => s.setView)
   const showTrackRecord = useSelection((s) => s.showTrackRecord)
+  const goHome = () => useSelection.setState({ selected: null, view: 'reading' })
 
   function submit(e: FormEvent) {
     e.preventDefault()
@@ -19,7 +20,9 @@ export function TopBar() {
 
   return (
     <header className="topbar">
-      <span className="brand">KAIROS</span>
+      <button type="button" className="brand" onClick={goHome}>
+        KAIROS
+      </button>
       <form onSubmit={submit} className="search" role="search">
         <input
           value={value}

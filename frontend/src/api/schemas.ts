@@ -15,6 +15,14 @@ export const ListEntrySchema = z.object({
   ticker: z.string(),
   lean: LeanSchema.nullable(),
   ai_status: AIStatusSchema.nullable(),
+  name: z.string().nullable().default(null),
+  kind: z.enum(['stock', 'etf']).nullable().default(null),
+  price: z.number().nullable().default(null),
+  day_change_pct: z.number().nullable().default(null),
+  price_label: z.enum(['stretched', 'near_average', 'below_range', 'insufficient_history']).nullable().default(null),
+  next_earnings: z.string().nullable().default(null),
+  hype_warning: z.boolean().nullable().default(null),
+  updated_at: z.string().nullable().default(null),
 })
 export const ListsSchema = z.object({
   holdings: z.array(ListEntrySchema),
@@ -36,6 +44,7 @@ export const NewsItemSchema = z.object({
   published_at: z.string(),
   related_ticker: z.string(),
   weight: z.number(),
+  outlet: z.string().nullable().optional(),
 })
 
 export const PriceContextSchema = z.object({

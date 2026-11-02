@@ -1,4 +1,5 @@
 import { Disclaimer } from './components/Disclaimer'
+import { Overview } from './components/Overview'
 import { ReadingPanel } from './components/ReadingPanel'
 import { SettingsPage } from './components/SettingsPage'
 import { Sidebar } from './components/Sidebar'
@@ -10,14 +11,7 @@ function Main() {
   const { selected, view, trackTicker } = useSelection()
   if (view === 'settings') return <SettingsPage />
   if (view === 'track') return <TrackRecordPanel key={trackTicker ?? 'all'} ticker={trackTicker ?? undefined} />
-  if (!selected) {
-    return (
-      <div className="empty">
-        <h1>Pick a ticker</h1>
-        <p className="muted">Choose one from the sidebar or type any ticker in the search bar.</p>
-      </div>
-    )
-  }
+  if (!selected) return <Overview />
   return <ReadingPanel key={selected} ticker={selected} />
 }
 

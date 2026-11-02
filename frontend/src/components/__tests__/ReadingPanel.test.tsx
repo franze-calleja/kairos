@@ -30,10 +30,12 @@ test('full reading renders all sections with cited sources', async () => {
   }
   const drivers = screen.getByRole('heading', { name: "What's driving it" }).closest('section')!
   expect(within(drivers).getByRole('link', { name: '[1]' })).toHaveAttribute('href', 'https://example.com/guidance')
-  expect(screen.getByText('Earnings in 5 days')).toBeInTheDocument()
-  expect(screen.getByText('Near its long-term average')).toBeInTheDocument()
-  expect(screen.getByText('No warning signs')).toBeInTheDocument()
-  expect(screen.getByText(/Bullish/)).toBeInTheDocument()
+  expect(screen.getAllByText('Earnings in 5 days').length).toBeGreaterThan(0)
+  expect(screen.getAllByText('Near its long-term average').length).toBeGreaterThan(0)
+  expect(screen.getAllByText('No warning signs').length).toBeGreaterThan(0)
+  const verdict = screen.getByRole('region', { name: 'Verdict' })
+  expect(within(verdict).getByText('Bullish')).toBeInTheDocument()
+  expect(within(verdict).getByText('Data-center guidance raised')).toBeInTheDocument()
 })
 
 test('not_enough_signal hides AI cards but shows numbers', async () => {
@@ -88,6 +90,8 @@ test('passed hype checks use neutral labels, not warning wording', async () => {
   serve({})
   renderWithClient(<ReadingPanel ticker="NVDA" />)
   const card = (await screen.findByRole('heading', { name: 'Hype check' })).closest('section')!
+  const userEvent = (await import('@testing-library/user-event')).default
+  await userEvent.click(within(card).getByRole('button', { name: /6 checks passed/ }))
   for (const label of ['Company size', 'Share price', 'Exchange', 'Trading volume', '5-day price move', 'Buzz vs. real news']) {
     expect(within(card).getByText(new RegExp(label))).toBeInTheDocument()
   }
@@ -135,4 +139,29 @@ test('first load shows a placeholder layout', async () => {
   renderWithClient(<ReadingPanel ticker="NVDA" />)
   expect(screen.getByRole('status', { name: 'Loading reading' })).toBeInTheDocument()
   expect(await screen.findByRole('heading', { name: "What's driving it" })).toBeInTheDocument()
+})
+
+
+test('sources show the top 5 with outlet names, the rest on demand', async () => {
+  const userEvent = (await import('@testing-library/user-event')).default
+  const many = Array.from({ length: 8 }, (_, i) => ({
+    ...reading.sources[0], id: `s${i}`, title: `Story ${i}`, url: `https://e.com/${i}`, outlet: 'Reuters',
+  }))
+  serve({ sources: many })
+  renderWithClient(<ReadingPanel ticker="NVDA" />)
+  const sources = (await screen.findByRole('heading', { name: 'Sources' })).closest('section')!
+  expect(within(sources).getAllByRole('link')).toHaveLength(5)
+  expect(within(sources).getAllByText(/Reuters/).length).toBe(5)
+  await userEvent.click(within(sources).getByRole('button', { name: 'Show all 8' }))
+  expect(within(sources).getAllByRole('link')).toHaveLength(8)
+})
+
+test('chart range buttons switch the visible period', async () => {
+  const userEvent = (await import('@testing-library/user-event')).default
+  serve({})
+  renderWithClient(<ReadingPanel ticker="NVDA" />)
+  const oneMonth = await screen.findByRole('button', { name: '1M' })
+  expect(screen.getByRole('button', { name: '1Y' })).toHaveAttribute('aria-pressed', 'true')
+  await userEvent.click(oneMonth)
+  expect(oneMonth).toHaveAttribute('aria-pressed', 'true')
 })

@@ -7,12 +7,16 @@ import { server } from '../../test/server'
 import { renderWithClient } from '../../test/utils'
 import { Sidebar } from '../Sidebar'
 
+const empty = {
+  name: null, kind: null, price: null, day_change_pct: null, price_label: null,
+  next_earnings: null, hype_warning: null, updated_at: null,
+}
 const lists = {
   holdings: [
-    { ticker: 'NVDA', lean: 'bullish', ai_status: 'ok' },
-    { ticker: 'VOO', lean: null, ai_status: null },
+    { ...empty, ticker: 'NVDA', lean: 'bullish', ai_status: 'ok', price: 204.64, day_change_pct: -4.2 },
+    { ...empty, ticker: 'VOO', lean: null, ai_status: null },
   ],
-  watching: [{ ticker: 'TINY', lean: null, ai_status: 'not_enough_signal' }],
+  watching: [{ ...empty, ticker: 'TINY', lean: null, ai_status: 'not_enough_signal' }],
 }
 
 test('shows lists with lean pills', async () => {
@@ -20,7 +24,8 @@ test('shows lists with lean pills', async () => {
   renderWithClient(<Sidebar />)
   const nvda = await screen.findByRole('button', { name: /^NVDA/ })
   expect(within(nvda).getByText('Bullish')).toBeInTheDocument()
-  expect(within(screen.getByRole('button', { name: /^VOO/ })).getByText('—')).toBeInTheDocument()
+  expect(within(nvda).getByText('-4.2%')).toBeInTheDocument()
+  expect(within(screen.getByRole('button', { name: /^VOO/ })).getByText('No reading yet')).toBeInTheDocument()
   expect(
     within(screen.getByRole('button', { name: /^TINY/ })).getByText('Not enough signal'),
   ).toBeInTheDocument()
@@ -70,4 +75,18 @@ test('discover rows show why they were suggested', async () => {
   )
   renderWithClient(<Sidebar />)
   expect(await screen.findByText('holds NVDA (20.0%)')).toBeInTheDocument()
+})
+
+
+test('discover shows scan progress while the morning refresh scans', async () => {
+  server.use(
+    http.get('/api/jobs/morning', () =>
+      HttpResponse.json({
+        running: true, phase: 'discover', done: 120, total: 503, current: null,
+        started_at: null, last_run: null,
+      }),
+    ),
+  )
+  renderWithClient(<Sidebar />)
+  expect(await screen.findByText('Scanning S&P 500… 120 / 503')).toBeInTheDocument()
 })

@@ -1,9 +1,24 @@
 import { useState, type FormEvent } from 'react'
 import { apiError } from '../api/client'
-import { useAddTicker, useDiscover, useLists, useRemoveTicker } from '../api/hooks'
+import { useAddTicker, useDiscover, useJobStatus, useLists, useRemoveTicker } from '../api/hooks'
 import type { ListEntry, ListName } from '../api/schemas'
 import { useSelection } from '../store/selection'
-import { LeanPill } from './LeanPill'
+import { pct } from './format'
+import { leanLabel } from './lean'
+
+function LeanDot({ entry }: { entry: ListEntry }) {
+  const label = leanLabel(entry.lean, entry.ai_status, !!entry.hype_warning)
+  const tone = entry.hype_warning
+    ? 'hype'
+    : entry.ai_status === 'not_enough_signal'
+      ? 'muted'
+      : (entry.lean ?? 'none')
+  return (
+    <span className={`lean-dot dot-${tone}`} title={label}>
+      <span className="sr-only">{label}</span>
+    </span>
+  )
+}
 
 function ListSection({ title, list, entries }: { title: string; list: ListName; entries: ListEntry[] }) {
   const [value, setValue] = useState('')
@@ -25,7 +40,12 @@ function ListSection({ title, list, entries }: { title: string; list: ListName; 
         <div key={entry.ticker} className={`side-row ${selected === entry.ticker ? 'is-selected' : ''}`}>
           <button type="button" className="side-ticker" onClick={() => select(entry.ticker)}>
             <b>{entry.ticker}</b>
-            <LeanPill lean={entry.lean} aiStatus={entry.ai_status} />
+            {entry.day_change_pct !== null && (
+              <span className={`side-change ${entry.day_change_pct >= 0 ? 'up' : 'down'}`}>
+                {pct(entry.day_change_pct)}
+              </span>
+            )}
+            <LeanDot entry={entry} />
           </button>
           <button
             type="button"
@@ -53,11 +73,19 @@ function ListSection({ title, list, entries }: { title: string; list: ListName; 
 
 function DiscoverSection() {
   const { data } = useDiscover()
+  const { data: job } = useJobStatus()
   const select = useSelection((s) => s.select)
+  const scanning = job?.running && job.phase === 'discover'
   return (
     <section className="side-section">
       <h2 className="side-title">Discover ✦</h2>
-      {!data?.items.length && <p className="muted small">Suggestions appear after the morning refresh.</p>}
+      {scanning && (
+        <p className="side-note">
+          <span className="spinner" aria-hidden="true" />{' '}
+          {job.total ? `Scanning S&P 500… ${job.done} / ${job.total}` : 'Finding suggestions…'}
+        </p>
+      )}
+      {!scanning && !data?.items.length && <p className="side-note">Suggestions appear after the morning refresh.</p>}
       {data?.items.map((item) => (
         <button key={item.ticker} type="button" className="side-discover" onClick={() => select(item.ticker)}>
           <b>{item.ticker}</b>
