@@ -1092,3 +1092,53 @@ h3 {
 .reason-flag {
   color: var(--hype);
 }
+
+/* Compare */
+.compare-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.compare-head h1 {
+  font-size: 22px;
+}
+
+.compare-inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.compare-inputs input {
+  width: 110px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+  text-transform: uppercase;
+}
+
+.compare-table th[scope='row'] {
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 13px;
+  width: 22%;
+}
+
+.compare-table td {
+  width: 39%;
+  vertical-align: top;
+}
+
+.better {
+  font-weight: 700;
+  color: var(--bull);
+}
+
+.better::after {
+  content: ' ✓';
+}

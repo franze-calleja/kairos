@@ -79,6 +79,15 @@ export function VerdictCard({
             onClick={() => showTrackRecord(reading.ticker)}
           >
             track record
+          </button>{' '}
+          ·{' '}
+          <button
+            type="button"
+            className="link-button"
+            aria-label={`Compare ${reading.ticker} with another ticker`}
+            onClick={() => useSelection.getState().openCompare(reading.ticker)}
+          >
+            compare with…
           </button>
         </p>
       </div>

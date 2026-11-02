@@ -1,3 +1,4 @@
+import { ComparePage } from './components/ComparePage'
 import { Disclaimer } from './components/Disclaimer'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { ExposurePage } from './components/ExposurePage'
@@ -13,6 +14,7 @@ function Main() {
   const { selected, view, trackTicker } = useSelection()
   if (view === 'settings') return <SettingsPage />
   if (view === 'exposure') return <ExposurePage />
+  if (view === 'compare') return <ComparePage />
   if (view === 'track') return <TrackRecordPanel key={trackTicker ?? 'all'} ticker={trackTicker ?? undefined} />
   if (!selected) return <Overview />
   return <ReadingPanel key={selected} ticker={selected} />
