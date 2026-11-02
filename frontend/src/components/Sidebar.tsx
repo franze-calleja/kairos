@@ -4,6 +4,7 @@ import { useAddTicker, useDiscover, useJobStatus, useLists, useRemoveTicker } fr
 import type { ListEntry, ListName } from '../api/schemas'
 import { useSelection } from '../store/selection'
 import { pct } from './format'
+import { SidebarSummary } from './SidebarSummary'
 import { leanLabel } from './lean'
 
 function LeanDot({ entry }: { entry: ListEntry }) {
@@ -105,6 +106,7 @@ export function Sidebar() {
   const { data, isError, error } = useLists()
   return (
     <aside className="sidebar">
+      <SidebarSummary />
       {isError && <p className="error-text">{apiError(error)}</p>}
       <ListSection title="My Holdings" list="holdings" entries={data?.holdings ?? []} />
       <ListSection title="Watching" list="watching" entries={data?.watching ?? []} />
