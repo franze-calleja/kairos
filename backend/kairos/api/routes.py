@@ -175,6 +175,7 @@ def get_settings_route(conn: Conn, settings: AppSettings) -> dict:
         "gemini_model": settings.gemini_model,
         "budget": budget.usage(datetime.now(UTC)),
         "morning_refresh_time": settings.morning_refresh_time,
+        "evening_refresh_time": settings.evening_refresh_time,
         "tz": settings.tz,
         "reading_cache_hours": settings.reading_cache_hours,
         "last_morning_run": get_meta(conn, "last_morning_run"),

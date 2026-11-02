@@ -46,3 +46,10 @@ def test_seed_tickers_are_normalized():
         "BRK-B",
         "NVDA",
     ]
+
+
+def test_evening_refresh_time():
+    assert Settings(_env_file=None).evening_refresh_time == "21:00"
+    assert Settings(_env_file=None, evening_refresh_time="").evening_refresh_time is None
+    with pytest.raises(ValidationError, match="HH:MM"):
+        Settings(_env_file=None, evening_refresh_time="9pm")

@@ -66,6 +66,7 @@ All settings live in `.env` (see `.env.example` for the full list with comments)
 | `REDDIT_ENABLED` | `false` | Optional low-volume Reddit RSS (see below) |
 | `TZ` | `UTC` | Your timezone (IANA name, e.g. `Asia/Manila`) |
 | `MORNING_REFRESH_TIME` | `07:00` | Daily automatic refresh of your lists, in `TZ`. If your computer was asleep or Kairos wasn't running at that time, the refresh runs within about 5 minutes of waking or starting (once per day). |
+| `EVENING_REFRESH_TIME` | `21:00` | Second daily refresh before the US open, in `TZ`: readings only, no Discover scan. Made up the same way if missed (until midnight). Empty disables. |
 | `READING_CACHE_HOURS` | `4` | How long a reading is reused before it is rebuilt |
 | `NEWS_WINDOW_DAYS` | `7` | Days of news read per ticker |
 | `KAIROS_SEED_HOLDINGS` / `KAIROS_SEED_WATCHING` | empty | Comma-separated tickers to pre-fill lists on first start |

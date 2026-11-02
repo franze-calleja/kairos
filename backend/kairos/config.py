@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     reddit_enabled: bool = False
     reading_cache_hours: int = 4
     morning_refresh_time: str = "07:00"
+    evening_refresh_time: str | None = "21:00"  # readings only, before the US open; empty disables
     tz: str = "UTC"
     db_path: str = "data/kairos.db"
     scheduler_enabled: bool = True
@@ -56,14 +57,19 @@ class Settings(BaseSettings):
             ) from e
         return value
 
-    @field_validator("morning_refresh_time")
+    @field_validator("morning_refresh_time", "evening_refresh_time", mode="before")
     @classmethod
-    def _valid_time(cls, value: str) -> str:
-        parts = value.split(":")
+    def _valid_time(cls, value: object, info) -> object:
+        if value is None or (isinstance(value, str) and not value.strip()):
+            if info.field_name == "morning_refresh_time":
+                raise ValueError("MORNING_REFRESH_TIME must be HH:MM, e.g. 07:00")
+            return None
+        text = str(value).strip()
+        parts = text.split(":")
         ok = len(parts) == 2 and all(p.isdigit() for p in parts)
         if not ok or not (0 <= int(parts[0]) <= 23 and 0 <= int(parts[1]) <= 59):
-            raise ValueError(f"MORNING_REFRESH_TIME {value!r} must be HH:MM, e.g. 07:00")
-        return value
+            raise ValueError(f"{info.field_name.upper()} {text!r} must be HH:MM, e.g. 07:00")
+        return text
 
     @field_validator(
         "gemini_api_key",

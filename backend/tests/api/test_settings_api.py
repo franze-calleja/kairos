@@ -16,6 +16,7 @@ def test_settings_no_secrets(settings):
     assert body["sec_configured"] is False
     assert body["budget"] == {"minute": 0, "day": 0, "rpm": 10, "rpd": 200}
     assert body["last_morning_run"] is None
+    assert body["evening_refresh_time"] == "21:00"
     assert body["thresholds"]["micro_cap_usd"] == 300_000_000
 
 
@@ -38,4 +39,4 @@ def test_jobs_morning_conflict(client, monkeypatch):
 def test_job_status_endpoint(client):
     body = client.get("/api/jobs/morning").json()
     assert body["running"] is False
-    assert set(body) >= {"running", "phase", "done", "total", "current", "last_run"}
+    assert set(body) >= {"running", "kind", "phase", "done", "total", "current", "last_run"}
