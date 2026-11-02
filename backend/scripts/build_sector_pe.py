@@ -1,4 +1,4 @@
-"""Build kairos/data/sector_pe.json: median trailing P/E per sector across universe.txt.
+"""Build kairos/data/sector_pe.json: median trailing P/E per sector across universe.txt (S&P 500).
 
 Run manually (takes several minutes; Yahoo may throttle):
     cd backend && uv run python scripts/build_sector_pe.py
@@ -37,7 +37,7 @@ def main() -> None:
         time.sleep(0.2)
     out = {
         "generated": date.today().isoformat(),
-        "method": "median trailingPE of S&P 500 + Nasdaq-100 members per Yahoo sector",
+        "method": "median trailingPE of S&P 500 members per Yahoo sector",
         "sectors": {s: round(statistics.median(v), 1) for s, v in sorted(by_sector.items()) if v},
     }
     (DATA / "sector_pe.json").write_text(json.dumps(out, indent=2) + "\n")

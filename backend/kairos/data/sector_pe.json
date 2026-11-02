@@ -1,0 +1,17 @@
+{
+  "generated": "2026-11-02",
+  "method": "median trailingPE of S&P 500 members per Yahoo sector",
+  "sectors": {
+    "Basic Materials": 30.6,
+    "Communication Services": 17.0,
+    "Consumer Cyclical": 19.8,
+    "Consumer Defensive": 22.3,
+    "Energy": 17.3,
+    "Financial Services": 14.0,
+    "Healthcare": 31.1,
+    "Industrials": 26.6,
+    "Real Estate": 30.8,
+    "Technology": 30.5,
+    "Utilities": 21.1
+  }
+}
