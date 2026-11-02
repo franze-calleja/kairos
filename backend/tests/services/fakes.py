@@ -98,7 +98,8 @@ class Sources:
         )
 
     async def earnings_calendar(self, client, settings, t, days_ahead=90, today=None):
-        return None, ok("finnhub")
+        self.earnings_today = today
+        return getattr(self, "next_earnings", None), ok("finnhub")
 
     async def google_search(self, client, query, related, days):
         return AdapterResult[NewsItem](

@@ -146,3 +146,18 @@ async def test_other_share_classes_of_owned_companies_are_skipped(settings, conn
     tickers = [i["ticker"] for i in await run_discover(settings, conn, NOW)]
     assert "GOOG" not in tickers
     assert "AVGO" in tickers and "MSFT" in tickers
+
+
+async def test_failed_spike_scan_is_reported_and_stops_early(settings, conn, fake):
+    settings.finnhub_api_key = "bad-key"
+    calls = []
+
+    class Failing(Fake):
+        async def company_news(self, client, settings, t, days, today=None):
+            calls.append(t)
+            return AdapterResult[NewsItem](items=[], status=error("finnhub", "HTTP 401"))
+
+    fake(Failing(), universe=tuple(f"T{i}" for i in range(50)))
+    await run_discover(settings, conn, NOW)
+    assert discover.latest_discover(conn)["spike_scan"] == "error"
+    assert len(calls) <= discover.MAX_CONSECUTIVE_ERRORS

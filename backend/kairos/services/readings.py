@@ -4,6 +4,7 @@ import asyncio
 import sqlite3
 from datetime import datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from kairos.adapters.base import disabled, error, make_http_client, ok
 from kairos.adapters.finnhub import company_news, earnings_calendar
@@ -114,7 +115,7 @@ async def build_reading(
     kind = kind_from_info(info)
     name = info.get("longName") or info.get("shortName") or symbol
     days = settings.news_window_days
-    today = now.date()
+    today = now.astimezone(ZoneInfo(settings.tz)).date()  # the user's calendar day
 
     async with make_http_client() as client:
         holdings, fund = [], {"expense_ratio": None, "aum": None}
@@ -130,7 +131,7 @@ async def build_reading(
         statuses += news_statuses
         next_earnings = None
         if kind == "stock":
-            next_earnings, e_status = await earnings_calendar(client, settings, symbol)
+            next_earnings, e_status = await earnings_calendar(client, settings, symbol, today=today)
             statuses.append(e_status)
 
     cleaned = clean_news(raw)

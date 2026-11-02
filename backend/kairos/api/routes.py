@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 
+from kairos.adapters.prices import get_info
 from kairos.ai.budget import RequestBudget
 from kairos.api.deps import get_app_settings, get_conn
 from kairos.config import Settings
@@ -16,6 +17,7 @@ from kairos.services.discover import latest_discover
 from kairos.services.lists import ListName, add_ticker, list_tickers, remove_ticker
 from kairos.services.readings import DataUnavailable, UnknownTicker, get_reading
 from kairos.services.track_record import stats
+from kairos.tickers import normalize_ticker
 
 router = APIRouter(prefix="/api")
 Conn = Annotated[sqlite3.Connection, Depends(get_conn)]
@@ -83,12 +85,15 @@ def get_lists(conn: Conn) -> dict[str, list[ListEntry]]:
 
 
 @router.post("/lists/{name}", status_code=201)
-def post_list(name: ListName, body: TickerIn, conn: Conn) -> ListEntry:
+async def post_list(name: ListName, body: TickerIn, conn: Conn) -> ListEntry:
     try:
-        ticker = add_ticker(conn, name, body.ticker)
+        symbol = normalize_ticker(body.ticker)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
-    return _entry(conn, ticker)
+    _, status = await get_info(symbol)
+    if status.detail == "unknown ticker":  # a Yahoo outage doesn't block adding
+        raise HTTPException(status_code=422, detail=f"Unknown ticker: {symbol}")
+    return _entry(conn, add_ticker(conn, name, symbol))
 
 
 @router.delete("/lists/{name}/{ticker}", status_code=204)
@@ -116,6 +121,10 @@ async def get_reading_route(
 
 @router.get("/track-record")
 def get_track_record(conn: Conn, ticker: str | None = None) -> dict:
+    try:
+        ticker = normalize_ticker(ticker) if ticker else None
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
     return stats(conn, ticker)
 
 

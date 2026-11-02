@@ -1,5 +1,6 @@
 from functools import lru_cache
 from typing import Annotated
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
@@ -36,8 +37,32 @@ class Settings(BaseSettings):
     @field_validator("kairos_seed_holdings", "kairos_seed_watching", mode="before")
     @classmethod
     def _split_tickers(cls, value: object) -> object:
+        from kairos.tickers import normalize_ticker
+
         if isinstance(value, str):
-            return [t.strip().upper() for t in value.split(",") if t.strip()]
+            value = [t for t in value.split(",") if t.strip()]
+        if isinstance(value, list):
+            return [normalize_ticker(str(t)) for t in value]  # ValueError -> clear message
+        return value
+
+    @field_validator("tz")
+    @classmethod
+    def _valid_tz(cls, value: str) -> str:
+        try:
+            ZoneInfo(value)
+        except (ZoneInfoNotFoundError, ValueError) as e:
+            raise ValueError(
+                f"Unknown timezone {value!r}; use an IANA name like Asia/Manila"
+            ) from e
+        return value
+
+    @field_validator("morning_refresh_time")
+    @classmethod
+    def _valid_time(cls, value: str) -> str:
+        parts = value.split(":")
+        ok = len(parts) == 2 and all(p.isdigit() for p in parts)
+        if not ok or not (0 <= int(parts[0]) <= 23 and 0 <= int(parts[1]) <= 59):
+            raise ValueError(f"MORNING_REFRESH_TIME {value!r} must be HH:MM, e.g. 07:00")
         return value
 
     @field_validator(

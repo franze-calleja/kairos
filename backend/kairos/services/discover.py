@@ -1,5 +1,6 @@
 """Discover: tickers worth a look — unusual news spikes and funds/stocks similar to holdings."""
 
+import logging
 import sqlite3
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -15,8 +16,10 @@ from kairos.services.lists import list_tickers
 DATA = Path(__file__).parent.parent / "data"
 UNIVERSE_PATH = DATA / "universe.txt"
 ETF_LIST_PATH = DATA / "etf_list.txt"
+log = logging.getLogger(__name__)
 SCAN_DAYS = 14
 MIN_RECENT = 5
+MAX_CONSECUTIVE_ERRORS = 10  # e.g. a bad Finnhub key: stop instead of failing 500 times
 MIN_SPIKE_SCORE = 2.0  # recent news rate must be at least ~2x the ticker's usual rate
 TOP_SPIKES = 10
 MAX_SIMILAR_PER_HOLDING = 5
@@ -50,12 +53,17 @@ def spike_score(daily_counts: list[int]) -> float:
 ProgressFn = Callable[[int, int], None]
 
 
+class SpikeScanFailed(Exception):
+    pass
+
+
 async def _spikes(
     settings: Settings, owned: set[str], now: datetime, on_progress: ProgressFn | None = None
 ) -> list[dict]:
     today = now.date()
     found = []
     universe = load_list(UNIVERSE_PATH)
+    errors = consecutive = scanned = 0
     async with make_http_client() as client:
         for i, ticker in enumerate(universe, 1):
             if on_progress:
@@ -63,6 +71,14 @@ async def _spikes(
             if ticker in owned:
                 continue
             result = await company_news(client, settings, ticker, SCAN_DAYS, today=today)
+            scanned += 1
+            if result.status.status == "error":
+                errors += 1
+                consecutive += 1
+                if consecutive >= MAX_CONSECUTIVE_ERRORS:
+                    raise SpikeScanFailed(result.status.detail or "Finnhub errors")
+                continue
+            consecutive = 0
             counts = [0] * SCAN_DAYS
             for item in result.items:
                 age = (today - item.published_at.date()).days
@@ -78,6 +94,8 @@ async def _spikes(
                         "score": score,
                     }
                 )
+    if scanned and errors > scanned / 2:
+        raise SpikeScanFailed(f"{errors} of {scanned} Finnhub requests failed")
     return sorted(found, key=lambda r: -r["score"])[:TOP_SPIKES]
 
 
@@ -130,7 +148,11 @@ async def run_discover(
     held = list_tickers(conn, "holdings")
     owned = _with_share_classes(set(held) | set(list_tickers(conn, "watching")))
     if settings.finnhub_api_key:
-        spikes, scan = await _spikes(settings, owned, now, on_progress), "ok"
+        try:
+            spikes, scan = await _spikes(settings, owned, now, on_progress), "ok"
+        except SpikeScanFailed as e:
+            log.warning("Discover news-spike scan failed: %s", e)
+            spikes, scan = [], "error"
     else:
         spikes, scan = [], "not_configured"
     best: dict[str, dict] = {}

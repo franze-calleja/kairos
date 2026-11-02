@@ -123,3 +123,15 @@ async def test_attention_uses_uncapped_news(settings, conn, src):
     assert len(r.sources) == 40
     # 50 articles spread over Nov 2/1/Oct 31: 28 recent + 22 baseline (the capped 40 would give 12)
     assert r.hype[0].value == "28 articles in 2 days vs 4.4/day before"
+
+
+async def test_event_dates_use_local_timezone(settings, conn, src):
+    # 07:30 in Manila on Nov 3 is still Nov 2 in UTC.
+    from datetime import UTC, date, datetime
+
+    settings.tz = "Asia/Manila"
+    src.next_earnings = date(2026, 11, 10)
+    now = datetime(2026, 11, 2, 23, 30, tzinfo=UTC)
+    r = await build_reading(settings, conn, "NVDA", now)
+    assert src.earnings_today == date(2026, 11, 3)
+    assert r.events.earnings_within_7d is True  # Nov 3 -> Nov 10 is 7 days

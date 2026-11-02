@@ -30,3 +30,15 @@ def conn(settings):
 def client(settings):
     with TestClient(create_app(settings)) as c:
         yield c
+
+
+@pytest.fixture(autouse=True)
+def known_tickers(monkeypatch):
+    """Adding to a list checks the ticker exists via Yahoo; stub it (tests may override)."""
+    from kairos.adapters.base import ok
+    from kairos.api import routes
+
+    async def known(ticker):
+        return {"quoteType": "EQUITY"}, ok("yfinance")
+
+    monkeypatch.setattr(routes, "get_info", known)
