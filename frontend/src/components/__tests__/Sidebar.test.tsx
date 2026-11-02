@@ -90,3 +90,13 @@ test('discover shows scan progress while the morning refresh scans', async () =>
   renderWithClient(<Sidebar />)
   expect(await screen.findByText('Scanning S&P 500… 120 / 503')).toBeInTheDocument()
 })
+
+test('discover says when the news-spike scan failed', async () => {
+  server.use(
+    http.get('/api/discover', () =>
+      HttpResponse.json({ items: [], created_at: '2026-11-02T00:00:00Z', spike_scan: 'error' }),
+    ),
+  )
+  renderWithClient(<Sidebar />)
+  expect(await screen.findByText(/News-spike scan failed/)).toBeInTheDocument()
+})

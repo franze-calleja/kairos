@@ -85,7 +85,12 @@ function DiscoverSection() {
           {job.total ? `Scanning S&P 500… ${job.done} / ${job.total}` : 'Finding suggestions…'}
         </p>
       )}
-      {!scanning && !data?.items.length && <p className="side-note">Suggestions appear after the morning refresh.</p>}
+      {!scanning && data?.spike_scan === 'error' && (
+        <p className="side-note error-text">News-spike scan failed — check FINNHUB_API_KEY.</p>
+      )}
+      {!scanning && !data?.items.length && data?.spike_scan !== 'error' && (
+        <p className="side-note">Suggestions appear after the morning refresh.</p>
+      )}
       {data?.items.map((item) => (
         <button key={item.ticker} type="button" className="side-discover" onClick={() => select(item.ticker)}>
           <b>{item.ticker}</b>

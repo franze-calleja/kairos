@@ -140,7 +140,7 @@ export const TrackRecordSchema = z.object({
 export const DiscoverSchema = z.object({
   items: z.array(z.object({ ticker: z.string(), reason: z.string(), score: z.number() })),
   created_at: z.string().nullable(),
-  spike_scan: z.enum(['ok', 'not_configured']).nullable(),
+  spike_scan: z.enum(['ok', 'not_configured', 'error']).nullable(),
 })
 
 export const SettingsSchema = z.object({

@@ -1,4 +1,5 @@
 import { Disclaimer } from './components/Disclaimer'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { Overview } from './components/Overview'
 import { ReadingPanel } from './components/ReadingPanel'
 import { SettingsPage } from './components/SettingsPage'
@@ -16,13 +17,16 @@ function Main() {
 }
 
 export default function App() {
+  const { selected, view, trackTicker } = useSelection()
   return (
     <div className="app">
       <TopBar />
       <div className="layout">
         <Sidebar />
         <main className="main">
-          <Main />
+          <ErrorBoundary key={`${view}-${selected ?? ''}-${trackTicker ?? ''}`}>
+            <Main />
+          </ErrorBoundary>
         </main>
       </div>
       <Disclaimer />

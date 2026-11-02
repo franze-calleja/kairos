@@ -54,7 +54,7 @@ test('not_enough_signal hides AI cards but shows numbers', async () => {
 test('budget_exhausted banner keeps computed sections', async () => {
   serve({ ai: null, ai_status: 'budget_exhausted' })
   renderWithClient(<ReadingPanel ticker="NVDA" />)
-  expect(await screen.findByText('Daily AI limit reached. Numbers below are still current.')).toBeInTheDocument()
+  expect(await screen.findByText('AI request limit reached. Numbers below are still current.')).toBeInTheDocument()
   expect(screen.getByRole('heading', { name: 'Quick numbers' })).toBeInTheDocument()
 })
 

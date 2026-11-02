@@ -5,7 +5,7 @@ import { PRICE_LABELS_SHORT } from '../lean'
 
 const AI_MESSAGES: Partial<Record<Reading['ai_status'], string>> = {
   not_enough_signal: 'Not enough signal: too little recent coverage to form a view.',
-  budget_exhausted: 'Daily AI limit reached. Numbers below are still current.',
+  budget_exhausted: 'AI request limit reached. Numbers below are still current.',
   unavailable: 'AI summary unavailable right now.',
   not_configured: 'Add GEMINI_API_KEY to .env to enable AI summaries.',
 }
