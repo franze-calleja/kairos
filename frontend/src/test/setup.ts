@@ -8,6 +8,6 @@ beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 afterEach(() => {
   cleanup()
   server.resetHandlers()
-  useSelection.setState({ selected: null, view: 'reading' })
+  useSelection.setState({ selected: null, view: 'reading', trackTicker: null })
 })
 afterAll(() => server.close())

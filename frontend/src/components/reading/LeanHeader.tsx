@@ -1,8 +1,10 @@
 import type { Reading } from '../../api/schemas'
+import { useSelection } from '../../store/selection'
 import { LeanPill } from '../LeanPill'
 import { pct } from '../format'
 
 export function LeanHeader({ reading, onRefresh, refreshing }: { reading: Reading; onRefresh: () => void; refreshing: boolean }) {
+  const showTrackRecord = useSelection((s) => s.showTrackRecord)
   const hype = reading.hype.some((f) => f.triggered)
   const updated = new Date(reading.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   return (
@@ -28,6 +30,15 @@ export function LeanHeader({ reading, onRefresh, refreshing }: { reading: Readin
           updated {updated}{' '}
           <button type="button" className="link-button" onClick={onRefresh} disabled={refreshing}>
             {refreshing ? 'refreshing…' : 'refresh'}
+          </button>{' '}
+          ·{' '}
+          <button
+            type="button"
+            className="link-button"
+            aria-label={`Track record for ${reading.ticker}`}
+            onClick={() => showTrackRecord(reading.ticker)}
+          >
+            track record
           </button>
         </p>
       </div>

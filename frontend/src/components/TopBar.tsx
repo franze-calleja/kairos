@@ -1,14 +1,16 @@
 import { useState, type FormEvent } from 'react'
+import { normalizeTicker } from '../api/tickers'
 import { useSelection } from '../store/selection'
 
 export function TopBar() {
   const [value, setValue] = useState('')
   const select = useSelection((s) => s.select)
   const setView = useSelection((s) => s.setView)
+  const showTrackRecord = useSelection((s) => s.showTrackRecord)
 
   function submit(e: FormEvent) {
     e.preventDefault()
-    const ticker = value.trim().toUpperCase()
+    const ticker = normalizeTicker(value)
     if (!ticker) return
     select(ticker)
     setValue('')
@@ -28,7 +30,7 @@ export function TopBar() {
         />
       </form>
       <nav className="topnav">
-        <button type="button" onClick={() => setView('track')}>
+        <button type="button" onClick={() => showTrackRecord(null)}>
           Track record
         </button>
         <button type="button" onClick={() => setView('settings')}>

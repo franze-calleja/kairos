@@ -17,3 +17,12 @@ test('empty search does nothing', async () => {
   await userEvent.type(screen.getByPlaceholderText('Check any ticker…'), '   {Enter}')
   expect(useSelection.getState().selected).toBeNull()
 })
+
+test('search uses the same ticker form as the backend', async () => {
+  renderWithClient(<TopBar />)
+  const input = screen.getByPlaceholderText('Check any ticker…')
+  await userEvent.type(input, ' $nvda {Enter}')
+  expect(useSelection.getState().selected).toBe('NVDA')
+  await userEvent.type(input, 'brk.b{Enter}')
+  expect(useSelection.getState().selected).toBe('BRK-B')
+})

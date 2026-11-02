@@ -7,9 +7,9 @@ import { TrackRecordPanel } from './components/TrackRecordPanel'
 import { useSelection } from './store/selection'
 
 function Main() {
-  const { selected, view } = useSelection()
+  const { selected, view, trackTicker } = useSelection()
   if (view === 'settings') return <SettingsPage />
-  if (view === 'track') return <TrackRecordPanel />
+  if (view === 'track') return <TrackRecordPanel key={trackTicker ?? 'all'} ticker={trackTicker ?? undefined} />
   if (!selected) {
     return (
       <div className="empty">
