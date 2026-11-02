@@ -10,6 +10,7 @@ from kairos.config import Settings
 from kairos.models import Reading
 from kairos.services.lists import ListName, add_ticker, list_tickers, remove_ticker
 from kairos.services.readings import DataUnavailable, UnknownTicker, get_reading
+from kairos.services.track_record import stats
 
 router = APIRouter(prefix="/api")
 Conn = Annotated[sqlite3.Connection, Depends(get_conn)]
@@ -79,3 +80,8 @@ async def get_reading_route(
         raise HTTPException(status_code=503, detail=f"Market data unavailable: {e}") from e
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
+
+
+@router.get("/track-record")
+def get_track_record(conn: Conn, ticker: str | None = None) -> dict:
+    return stats(conn, ticker)
