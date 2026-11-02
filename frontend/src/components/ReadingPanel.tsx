@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { apiError } from '../api/client'
 import { useReading, useRefreshReading } from '../api/hooks'
 import type { Reading } from '../api/schemas'
@@ -19,18 +20,59 @@ const AI_MESSAGES: Partial<Record<Reading['ai_status'], string>> = {
   not_configured: 'Add GEMINI_API_KEY to .env to enable AI summaries.',
 }
 
+function ReadingSkeleton({ ticker }: { ticker: string }) {
+  return (
+    <div className="reading skeleton" role="status" aria-label="Loading reading">
+      <p className="muted">
+        <span className="spinner" aria-hidden="true" /> Reading {ticker}… this can take ~20 seconds.
+      </p>
+      <div className="sk sk-title" />
+      <div className="sk sk-chart" />
+      <div className="sk sk-card" />
+      <div className="grid">
+        <div className="sk sk-card" />
+        <div className="sk sk-card" />
+        <div className="sk sk-card" />
+      </div>
+    </div>
+  )
+}
+
+const UPDATED_MESSAGE_MS = 4000
+
 export function ReadingPanel({ ticker }: { ticker: string }) {
   const { data: reading, isPending, isError, error } = useReading(ticker)
   const refresh = useRefreshReading()
+  const [justUpdated, setJustUpdated] = useState(false)
 
-  if (isPending) return <p className="muted loading">Reading {ticker}… this can take ~20 seconds.</p>
+  useEffect(() => {
+    if (!justUpdated) return
+    const t = setTimeout(() => setJustUpdated(false), UPDATED_MESSAGE_MS)
+    return () => clearTimeout(t)
+  }, [justUpdated])
+
+  if (isPending) return <ReadingSkeleton ticker={ticker} />
   if (isError) return <p className="error-box">{apiError(error)}</p>
 
   const aiMessage = AI_MESSAGES[reading.ai_status]
   const showAI = reading.ai_status === 'ok' && reading.ai
   return (
-    <article className="reading">
-      <LeanHeader reading={reading} onRefresh={() => refresh.mutate(reading.ticker)} refreshing={refresh.isPending} />
+    <article className={`reading ${refresh.isPending ? 'is-refreshing' : ''}`} aria-busy={refresh.isPending}>
+      <LeanHeader
+        reading={reading}
+        onRefresh={() => refresh.mutate(reading.ticker, { onSuccess: () => setJustUpdated(true) })}
+        refreshing={refresh.isPending}
+      />
+      {refresh.isPending && (
+        <p className="notice notice-busy" role="status">
+          <span className="spinner" aria-hidden="true" /> Refreshing {reading.ticker}… this can take ~20 seconds.
+        </p>
+      )}
+      {justUpdated && !refresh.isPending && (
+        <p className="notice notice-ok" role="status">
+          {reading.ticker} updated ✓
+        </p>
+      )}
       {refresh.isError && <p className="error-box">{apiError(refresh.error)}</p>}
       {reading.price && <PriceChart history={reading.price.history} />}
       {aiMessage && <p className="notice">{aiMessage}</p>}

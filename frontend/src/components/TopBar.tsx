@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { normalizeTicker } from '../api/tickers'
 import { useSelection } from '../store/selection'
+import { RefreshStatus } from './RefreshStatus'
 
 export function TopBar() {
   const [value, setValue] = useState('')
@@ -29,6 +30,7 @@ export function TopBar() {
           spellCheck={false}
         />
       </form>
+      <RefreshStatus />
       <nav className="topnav">
         <button type="button" onClick={() => showTrackRecord(null)}>
           Track record

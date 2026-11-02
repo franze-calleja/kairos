@@ -159,3 +159,14 @@ export type TrackRecord = z.infer<typeof TrackRecordSchema>
 export type Discover = z.infer<typeof DiscoverSchema>
 export type Settings = z.infer<typeof SettingsSchema>
 export type ListName = 'holdings' | 'watching'
+
+export const JobStatusSchema = z.object({
+  running: z.boolean(),
+  phase: z.enum(['readings', 'outcomes', 'discover']).nullable(),
+  done: z.number(),
+  total: z.number(),
+  current: z.string().nullable(),
+  started_at: z.string().nullable(),
+  last_run: z.string().nullable(),
+})
+export type JobStatus = z.infer<typeof JobStatusSchema>

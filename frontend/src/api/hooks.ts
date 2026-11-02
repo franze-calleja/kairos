@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, errorStatus, getParsed } from './client'
 import {
   DiscoverSchema,
+  JobStatusSchema,
   ListEntrySchema,
   ListsSchema,
   ReadingSchema,
@@ -70,6 +71,19 @@ export function useRunMorningJob() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: () => api.post('/jobs/morning'),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['settings'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settings'] })
+      qc.invalidateQueries({ queryKey: ['job-status'] })
+    },
   })
 }
+
+/** Polls the morning-refresh status: fast while a run is going, slowly otherwise
+ * (so a scheduled 07:00 run is noticed if the page was left open). */
+export const useJobStatus = (pollMs = { active: 2000, idle: 30_000 }) =>
+  useQuery({
+    queryKey: ['job-status'],
+    queryFn: () => getParsed('/jobs/morning', JobStatusSchema),
+    refetchInterval: (query) => (query.state.data?.running ? pollMs.active : pollMs.idle),
+    refetchIntervalInBackground: true,
+  })

@@ -105,3 +105,34 @@ test('triggered hype checks use warning wording', async () => {
   expect(within(card).getByText(/Penny stock price/)).toBeInTheDocument()
   expect(within(card).queryByText(/Share price/)).toBeNull()
 })
+
+test('refresh shows progress, then confirms the update', async () => {
+  const { delay } = await import('msw')
+  const userEvent = (await import('@testing-library/user-event')).default
+  server.use(
+    http.get('/api/readings/NVDA', async ({ request }) => {
+      if (new URL(request.url).searchParams.get('refresh')) {
+        await delay(150)
+        return HttpResponse.json({ ...reading, created_at: '2026-11-02T11:00:00Z' })
+      }
+      return HttpResponse.json(reading)
+    }),
+  )
+  renderWithClient(<ReadingPanel ticker="NVDA" />)
+  await userEvent.click(await screen.findByRole('button', { name: 'refresh' }))
+  expect(await screen.findByText('Refreshing NVDA… this can take ~20 seconds.')).toBeInTheDocument()
+  expect(await screen.findByText('NVDA updated ✓')).toBeInTheDocument()
+})
+
+test('first load shows a placeholder layout', async () => {
+  const { delay } = await import('msw')
+  server.use(
+    http.get('/api/readings/NVDA', async () => {
+      await delay(200)
+      return HttpResponse.json(reading)
+    }),
+  )
+  renderWithClient(<ReadingPanel ticker="NVDA" />)
+  expect(screen.getByRole('status', { name: 'Loading reading' })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: "What's driving it" })).toBeInTheDocument()
+})
