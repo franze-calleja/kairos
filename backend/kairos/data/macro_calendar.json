@@ -1,0 +1,12 @@
+{
+  "_sources": {
+    "FOMC": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm (final/decision day of each meeting)",
+    "CPI": "https://www.bls.gov/schedule/news_release/cpi.htm (release date)"
+  },
+  "_updated": "2026-11-02",
+  "_notes": "2027 FOMC dates are tentative on the Fed page and were not verified verbatim; re-check them. Update this file once a year.",
+  "FOMC": ["2026-01-28", "2026-03-18", "2026-04-29", "2026-06-17", "2026-07-29", "2026-09-16", "2026-10-28", "2026-12-09",
+           "2027-01-27", "2027-03-17", "2027-04-28", "2027-06-09", "2027-07-28", "2027-09-15", "2027-10-27", "2027-12-08"],
+  "CPI": ["2026-11-10", "2026-12-10", "2027-01-13", "2027-02-11", "2027-03-10", "2027-04-13", "2027-05-12", "2027-06-10",
+          "2027-07-14", "2027-08-11", "2027-09-14", "2027-10-14", "2027-11-10", "2027-12-10"]
+}

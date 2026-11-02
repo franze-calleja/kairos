@@ -1,6 +1,7 @@
 .superpowers/
 .env
-data/
+/data/
+backend/data/
 node_modules/
 dist/
 .venv/
