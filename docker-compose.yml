@@ -1,0 +1,17 @@
+services:
+  kairos:
+    build: .
+    image: kairos:local
+    ports:
+      - "127.0.0.1:8000:8000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DB_PATH: /app/data/kairos.db
+    volumes:
+      - kairos-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  kairos-data:
