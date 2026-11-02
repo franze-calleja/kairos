@@ -154,6 +154,7 @@ export type Lists = z.infer<typeof ListsSchema>
 export type Reading = z.infer<typeof ReadingSchema>
 export type NewsItem = z.infer<typeof NewsItemSchema>
 export type Claim = z.infer<typeof ClaimSchema>
+export type AISummary = z.infer<typeof AISummarySchema>
 export type TrackRecord = z.infer<typeof TrackRecordSchema>
 export type Discover = z.infer<typeof DiscoverSchema>
 export type Settings = z.infer<typeof SettingsSchema>
