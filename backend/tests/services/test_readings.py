@@ -135,3 +135,33 @@ async def test_event_dates_use_local_timezone(settings, conn, src):
     r = await build_reading(settings, conn, "NVDA", now)
     assert src.earnings_today == date(2026, 11, 3)
     assert r.events.earnings_within_7d is True  # Nov 3 -> Nov 10 is 7 days
+
+
+async def test_reading_checks_thesis_and_never_sends_shares(settings, conn, src):
+    from kairos.services.lists import add_ticker, set_shares, set_thesis
+
+    add_ticker(conn, "holdings", "NVDA")
+    set_shares(conn, "NVDA", 12.5)
+    set_thesis(conn, "holdings", "NVDA", "AI data-center demand keeps growing")
+    r = await build_reading(settings, conn, "NVDA", NOW)
+    assert "AI data-center demand keeps growing" in src.last_prompt
+    assert "12.5" not in src.last_prompt
+    assert r.thesis_checked == "AI data-center demand keeps growing"
+    assert r.ai.thesis_check.verdict == "challenges"
+
+
+async def test_no_thesis_no_check(settings, conn, src):
+    r = await build_reading(settings, conn, "NVDA", NOW)
+    assert "Thesis to evaluate" not in src.last_prompt
+    assert r.thesis_checked is None
+
+
+async def test_thesis_recorded_even_when_ai_could_not_check(settings, conn, src):
+    from kairos.services.lists import add_ticker, set_thesis
+
+    add_ticker(conn, "holdings", "NVDA")
+    set_thesis(conn, "holdings", "NVDA", "AI demand")
+    src.finnhub_per_ticker, src.google_per_ticker = 1, 1  # too little news: no AI request
+    r = await build_reading(settings, conn, "NVDA", NOW)
+    assert r.ai is None
+    assert r.thesis_checked == "AI demand"

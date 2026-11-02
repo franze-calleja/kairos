@@ -105,3 +105,4 @@ class Reading(BaseModel):
     ai_status: AIStatus
     sources: list[NewsItem]
     data_health: list[SourceStatus]
+    thesis_checked: str | None = None  # the owner's reason this reading evaluated, if any

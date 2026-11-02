@@ -233,3 +233,44 @@ def test_old_summaries_without_takeaway_still_load():
         "bear_case": [],
     }
     assert AISummary.model_validate(old).takeaway is None
+
+
+async def test_thesis_check_without_valid_citations_becomes_no_signal(monkeypatch, keyed, budget):
+    from kairos.ai.schema import ThesisCheck
+
+    use(
+        monkeypatch,
+        FakeClient(
+            [summary(thesis_check=ThesisCheck(verdict="supports", text="x", source_ids=["zzz"]))]
+        ),
+    )
+    result, _ = await gemini.summarize(keyed, budget, "p", {"a"}, NOW)
+    assert result.thesis_check.verdict == "no_signal"
+    assert result.thesis_check.text == ""
+
+
+async def test_thesis_check_valid_kept(monkeypatch, keyed, budget):
+    from kairos.ai.schema import ThesisCheck
+
+    check = ThesisCheck(verdict="challenges", text="Demand is slowing", source_ids=["a"])
+    use(monkeypatch, FakeClient([summary(thesis_check=check)]))
+    result, _ = await gemini.summarize(keyed, budget, "p", {"a"}, NOW)
+    assert result.thesis_check == check
+
+
+async def test_no_signal_never_carries_uncited_text(monkeypatch, keyed, budget):
+    from kairos.ai.schema import ThesisCheck
+
+    sneaky = ThesisCheck(verdict="no_signal", text="Made-up claim", source_ids=["zzz"])
+    use(monkeypatch, FakeClient([summary(thesis_check=sneaky)]))
+    result, _ = await gemini.summarize(keyed, budget, "p", {"a"}, NOW)
+    assert result.thesis_check == ThesisCheck(verdict="no_signal", text="", source_ids=[])
+
+
+async def test_verdict_without_text_becomes_no_signal(monkeypatch, keyed, budget):
+    from kairos.ai.schema import ThesisCheck
+
+    empty = ThesisCheck(verdict="supports", text="  ", source_ids=["a"])
+    use(monkeypatch, FakeClient([summary(thesis_check=empty)]))
+    result, _ = await gemini.summarize(keyed, budget, "p", {"a"}, NOW)
+    assert result.thesis_check.verdict == "no_signal"

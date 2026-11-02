@@ -3,7 +3,7 @@
 from datetime import UTC, datetime, timedelta
 
 from kairos.adapters.base import error, not_configured, ok
-from kairos.ai.schema import AISummary, Claim
+from kairos.ai.schema import AISummary, Claim, ThesisCheck
 from kairos.models import AdapterResult, Holding, NewsItem
 from tests.helpers import make_df
 
@@ -121,7 +121,13 @@ class Sources:
         if self.summary_status != "ok":
             return None, self.summary_status
         sid = sorted(allowed_ids)[0]
+        thesis_check = None
+        if "Thesis to evaluate" in prompt:
+            thesis_check = ThesisCheck(
+                verdict="challenges", text="News cuts against it", source_ids=[sid]
+            )
         return AISummary(
+            thesis_check=thesis_check,
             lean="bullish",
             confidence="medium",
             not_enough_signal=False,

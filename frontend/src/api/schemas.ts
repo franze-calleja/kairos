@@ -23,6 +23,9 @@ export const ListEntrySchema = z.object({
   next_earnings: z.string().nullable().default(null),
   hype_warning: z.boolean().nullable().default(null),
   updated_at: z.string().nullable().default(null),
+  shares: z.number().nullable().default(null),
+  thesis: z.string().nullable().default(null),
+  thesis_verdict: z.enum(['supports', 'challenges', 'mixed', 'no_signal']).nullable().default(null),
 })
 export const ListsSchema = z.object({
   holdings: z.array(ListEntrySchema),
@@ -100,6 +103,12 @@ export const HypeFlagSchema = z.object({
 
 export const ClaimSchema = z.object({ text: z.string(), source_ids: z.array(z.string()) })
 
+export const ThesisCheckSchema = z.object({
+  verdict: z.enum(['supports', 'challenges', 'mixed', 'no_signal']),
+  text: z.string(),
+  source_ids: z.array(z.string()),
+})
+
 export const AISummarySchema = z.object({
   lean: LeanSchema,
   confidence: z.enum(['low', 'medium', 'high']),
@@ -109,6 +118,7 @@ export const AISummarySchema = z.object({
   bull_case: z.array(ClaimSchema),
   bear_case: z.array(ClaimSchema),
   takeaway: ClaimSchema.nullable().optional(),
+  thesis_check: ThesisCheckSchema.nullable().optional(),
 })
 
 export const ReadingSchema = z.object({
@@ -124,6 +134,7 @@ export const ReadingSchema = z.object({
   ai_status: AIStatusSchema,
   sources: z.array(NewsItemSchema),
   data_health: z.array(SourceStatusSchema),
+  thesis_checked: z.string().nullable().optional(),
 })
 
 const HorizonStatsSchema = z.object({
@@ -151,6 +162,7 @@ export const SettingsSchema = z.object({
   gemini_model: z.string(),
   budget: z.object({ minute: z.number(), day: z.number(), rpm: z.number(), rpd: z.number() }),
   morning_refresh_time: z.string(),
+  evening_refresh_time: z.string().nullable().default(null),
   tz: z.string(),
   reading_cache_hours: z.number(),
   last_morning_run: z.string().nullable(),
@@ -172,6 +184,7 @@ export type ListName = 'holdings' | 'watching'
 
 export const JobStatusSchema = z.object({
   running: z.boolean(),
+  kind: z.enum(['morning', 'evening']).nullable().default(null),
   phase: z.enum(['readings', 'outcomes', 'discover']).nullable(),
   done: z.number(),
   total: z.number(),
@@ -180,3 +193,32 @@ export const JobStatusSchema = z.object({
   last_run: z.string().nullable(),
 })
 export type JobStatus = z.infer<typeof JobStatusSchema>
+
+export const ExposureSchema = z.object({
+  total_value: z.number(),
+  positions: z.array(
+    z.object({
+      ticker: z.string(),
+      shares: z.number(),
+      price: z.number(),
+      value: z.number(),
+      weight: z.number(),
+      name: z.string().nullable(),
+      kind: z.enum(['stock', 'etf']),
+    }),
+  ),
+  underlying: z.array(
+    z.object({
+      symbol: z.string(),
+      name: z.string(),
+      weight: z.number(),
+      direct: z.number(),
+      via: z.record(z.string(), z.number()),
+    }),
+  ),
+  rest_of_funds: z.number(),
+  sectors: z.array(z.object({ sector: z.string(), weight: z.number() })),
+  missing_prices: z.array(z.string()),
+})
+export type Exposure = z.infer<typeof ExposureSchema>
+export type ThesisCheck = z.infer<typeof ThesisCheckSchema>

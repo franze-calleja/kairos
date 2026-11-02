@@ -22,6 +22,7 @@ from kairos.analysis.price_context import compute_price_context
 from kairos.analysis.quick_numbers import build_quick_numbers, kind_from_info, sector_pe_reference
 from kairos.config import Settings
 from kairos.models import AdapterResult, NewsItem, Reading, SourceStatus
+from kairos.services.lists import get_thesis
 from kairos.tickers import normalize_ticker
 
 MIN_NEWS_FOR_AI = 3
@@ -134,6 +135,7 @@ async def build_reading(
             next_earnings, e_status = await earnings_calendar(client, settings, symbol, today=today)
             statuses.append(e_status)
 
+    thesis = get_thesis(conn, symbol)  # only the sentence; never shares or other tickers
     cleaned = clean_news(raw)
     # Hype attention needs the full deduplicated stream, not the capped list sent to the AI.
     deduped = clean_news(raw, max_items=max(len(raw), 1))
@@ -153,7 +155,9 @@ async def build_reading(
         )
     else:
         budget = RequestBudget(conn, settings.gemini_rpm, settings.gemini_rpd, settings.tz)
-        prompt = build_prompt(symbol, name, kind, cleaned, _computed_for_prompt(parts))
+        prompt = build_prompt(
+            symbol, name, kind, cleaned, _computed_for_prompt(parts), thesis=thesis
+        )
         ai, gemini_status = await summarize(settings, budget, prompt, {n.id for n in cleaned}, now)
         if gemini_status == "ok":
             ai_status = "not_enough_signal" if ai and ai.not_enough_signal else "ok"
@@ -177,6 +181,7 @@ async def build_reading(
         ai_status=ai_status,
         sources=cleaned,
         data_health=_merge_health(statuses),
+        thesis_checked=thesis,  # what was sent for checking; ai may still be None
         **parts,
     )
     conn.execute(

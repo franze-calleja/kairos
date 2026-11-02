@@ -8,6 +8,14 @@ class Claim(BaseModel):
     source_ids: list[str]
 
 
+class ThesisCheck(BaseModel):
+    """How this week's news bears on the owner's stated reason for holding/watching."""
+
+    verdict: Literal["supports", "challenges", "mixed", "no_signal"]
+    text: str
+    source_ids: list[str]
+
+
 class AISummary(BaseModel):
     lean: Literal["bullish", "neutral", "bearish"]
     confidence: Literal["low", "medium", "high"]
@@ -16,4 +24,5 @@ class AISummary(BaseModel):
     drivers: list[Claim]
     bull_case: list[Claim]
     bear_case: list[Claim]
-    takeaway: Claim | None = None  # one-sentence synthesis shown at the top of a reading
+    takeaway: Claim | None = None
+    thesis_check: ThesisCheck | None = None  # one-sentence synthesis shown at the top of a reading

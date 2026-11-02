@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from kairos.adapters.prices import get_info
 from kairos.ai.budget import RequestBudget
@@ -14,7 +14,15 @@ from kairos.db import get_meta
 from kairos.models import Reading
 from kairos.services import scheduler
 from kairos.services.discover import latest_discover
-from kairos.services.lists import ListName, add_ticker, list_tickers, remove_ticker
+from kairos.services.exposure import compute_exposure
+from kairos.services.lists import (
+    ListName,
+    add_ticker,
+    list_tickers,
+    remove_ticker,
+    set_shares,
+    set_thesis,
+)
 from kairos.services.readings import DataUnavailable, UnknownTicker, get_reading
 from kairos.services.track_record import stats
 from kairos.tickers import normalize_ticker
@@ -42,9 +50,28 @@ class ListEntry(BaseModel):
     next_earnings: str | None = None
     hype_warning: bool | None = None
     updated_at: str | None = None
+    shares: float | None = None
+    thesis: str | None = None
+    thesis_verdict: str | None = None
+    # Internal: what the latest reading checked; not part of the API response.
+    thesis_checked: str | None = Field(default=None, exclude=True)
+    thesis_verdict_raw: str | None = Field(default=None, exclude=True)
 
 
-def _entry(conn: sqlite3.Connection, ticker: str) -> ListEntry:
+def _entry(conn: sqlite3.Connection, ticker: str, name: ListName | None = None) -> ListEntry:
+    mine = None
+    if name:
+        mine = conn.execute(
+            "SELECT shares, thesis FROM lists WHERE list_name = ? AND ticker = ?", (name, ticker)
+        ).fetchone()
+    extra = {"shares": mine["shares"], "thesis": mine["thesis"]} if mine else {}
+    entry = _summary(conn, ticker)
+    if mine and mine["thesis"] and entry.thesis_checked == mine["thesis"]:
+        extra["thesis_verdict"] = entry.thesis_verdict_raw
+    return entry.model_copy(update=extra)
+
+
+def _summary(conn: sqlite3.Connection, ticker: str) -> ListEntry:
     row = conn.execute(
         "SELECT lean, ai_status, payload FROM readings WHERE ticker = ? "
         "ORDER BY created_at DESC, id DESC LIMIT 1",
@@ -68,6 +95,10 @@ def _entry(conn: sqlite3.Connection, ticker: str) -> ListEntry:
         else None,
         hype_warning=any(f.triggered for f in reading.hype),
         updated_at=reading.created_at.isoformat(),
+        thesis_checked=reading.thesis_checked,
+        thesis_verdict_raw=reading.ai.thesis_check.verdict
+        if reading.ai and reading.ai.thesis_check
+        else None,
     )
 
 
@@ -79,7 +110,7 @@ def health() -> dict[str, str]:
 @router.get("/lists")
 def get_lists(conn: Conn) -> dict[str, list[ListEntry]]:
     return {
-        name: [_entry(conn, t) for t in list_tickers(conn, name)]
+        name: [_entry(conn, t, name) for t in list_tickers(conn, name)]
         for name in ("holdings", "watching")
     }
 
@@ -93,7 +124,7 @@ async def post_list(name: ListName, body: TickerIn, conn: Conn) -> ListEntry:
     _, status = await get_info(symbol)
     if status.detail == "unknown ticker":  # a Yahoo outage doesn't block adding
         raise HTTPException(status_code=422, detail=f"Unknown ticker: {symbol}")
-    return _entry(conn, add_ticker(conn, name, symbol))
+    return _entry(conn, add_ticker(conn, name, symbol), name)
 
 
 @router.delete("/lists/{name}/{ticker}", status_code=204)
@@ -144,6 +175,7 @@ def get_settings_route(conn: Conn, settings: AppSettings) -> dict:
         "gemini_model": settings.gemini_model,
         "budget": budget.usage(datetime.now(UTC)),
         "morning_refresh_time": settings.morning_refresh_time,
+        "evening_refresh_time": settings.evening_refresh_time,
         "tz": settings.tz,
         "reading_cache_hours": settings.reading_cache_hours,
         "last_morning_run": get_meta(conn, "last_morning_run"),
@@ -174,3 +206,40 @@ async def post_morning_job(settings: AppSettings) -> dict[str, str]:
     _background.add(task)
     task.add_done_callback(_background.discard)
     return {"status": "started"}
+
+
+class SharesIn(BaseModel):
+    shares: float | None = None
+
+
+class ThesisIn(BaseModel):
+    thesis: str | None = None
+
+
+@router.put("/lists/holdings/{ticker}/shares")
+def put_shares(ticker: str, body: SharesIn, conn: Conn) -> ListEntry:
+    try:
+        set_shares(conn, ticker, body.shares)
+    except KeyError as e:
+        raise HTTPException(
+            status_code=404, detail=f"{ticker.upper()} is not in your holdings"
+        ) from e
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    return _entry(conn, normalize_ticker(ticker), "holdings")
+
+
+@router.put("/lists/{name}/{ticker}/thesis")
+def put_thesis(name: ListName, ticker: str, body: ThesisIn, conn: Conn) -> ListEntry:
+    try:
+        set_thesis(conn, name, ticker, body.thesis)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=f"{ticker.upper()} is not in {name}") from e
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    return _entry(conn, normalize_ticker(ticker), name)
+
+
+@router.get("/exposure")
+async def get_exposure(conn: Conn) -> dict:
+    return await compute_exposure(conn, datetime.now(UTC))

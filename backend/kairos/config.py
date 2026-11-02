@@ -2,7 +2,7 @@ from functools import lru_cache
 from typing import Annotated
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     reddit_enabled: bool = False
     reading_cache_hours: int = 4
     morning_refresh_time: str = "07:00"
+    evening_refresh_time: str | None = "21:00"  # readings only, before the US open; empty disables
     tz: str = "UTC"
     db_path: str = "data/kairos.db"
     scheduler_enabled: bool = True
@@ -33,6 +34,17 @@ class Settings(BaseSettings):
     low_volume: float = 100_000
     attention_ratio: float = 3.0
     attention_min_articles: int = 5
+
+    @model_validator(mode="after")
+    def _evening_after_morning(self) -> Settings:
+        # HH:MM strings compare correctly as text. Morning is due until evening starts.
+        if self.evening_refresh_time and self.evening_refresh_time <= self.morning_refresh_time:
+            raise ValueError(
+                "EVENING_REFRESH_TIME must be later than MORNING_REFRESH_TIME "
+                f"(got {self.evening_refresh_time} vs {self.morning_refresh_time}); "
+                "leave it empty to turn the evening refresh off"
+            )
+        return self
 
     @field_validator("kairos_seed_holdings", "kairos_seed_watching", mode="before")
     @classmethod
@@ -56,14 +68,19 @@ class Settings(BaseSettings):
             ) from e
         return value
 
-    @field_validator("morning_refresh_time")
+    @field_validator("morning_refresh_time", "evening_refresh_time", mode="before")
     @classmethod
-    def _valid_time(cls, value: str) -> str:
-        parts = value.split(":")
+    def _valid_time(cls, value: object, info) -> object:
+        if value is None or (isinstance(value, str) and not value.strip()):
+            if info.field_name == "morning_refresh_time":
+                raise ValueError("MORNING_REFRESH_TIME must be HH:MM, e.g. 07:00")
+            return None
+        text = str(value).strip()
+        parts = text.split(":")
         ok = len(parts) == 2 and all(p.isdigit() for p in parts)
         if not ok or not (0 <= int(parts[0]) <= 23 and 0 <= int(parts[1]) <= 59):
-            raise ValueError(f"MORNING_REFRESH_TIME {value!r} must be HH:MM, e.g. 07:00")
-        return value
+            raise ValueError(f"{info.field_name.upper()} {text!r} must be HH:MM, e.g. 07:00")
+        return text
 
     @field_validator(
         "gemini_api_key",

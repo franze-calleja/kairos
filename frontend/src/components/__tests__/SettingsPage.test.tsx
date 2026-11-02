@@ -14,6 +14,7 @@ const settings = {
   gemini_model: 'gemini-flash-latest',
   budget: { minute: 0, day: 12, rpm: 10, rpd: 200 },
   morning_refresh_time: '07:00',
+  evening_refresh_time: '21:00',
   tz: 'Asia/Manila',
   reading_cache_hours: 4,
   last_morning_run: null,
@@ -33,6 +34,7 @@ test('shows configuration and budget, and can run the morning refresh', async ()
   expect(await screen.findByText('Gemini ✓')).toBeInTheDocument()
   expect(screen.getByText('Finnhub ✗')).toBeInTheDocument()
   expect(screen.getByText('12 / 200 AI requests today')).toBeInTheDocument()
+  expect(screen.getByText(/Evening refresh at 21:00/)).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Run morning refresh now' }))
   expect(await screen.findByText(/Morning refresh started/)).toBeInTheDocument()
   expect(posted).toBe(true)

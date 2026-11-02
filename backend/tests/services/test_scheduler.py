@@ -216,3 +216,46 @@ async def test_morning_job_reports_progress(settings, conn, calls, monkeypatch):
     ]
     assert scheduler.job_status()["phase"] is None
     assert c.outcomes == 1
+
+
+@pytest.mark.parametrize(
+    "when,attempts,expected",
+    [
+        (manila(3, 6, 59), {}, None),
+        (manila(3, 8, 0), {}, "morning"),
+        (manila(3, 20, 59), {"last_morning_attempt": manila(3, 7, 1)}, None),
+        (manila(3, 21, 5), {"last_morning_attempt": manila(3, 7, 1)}, "evening"),
+        (manila(3, 23, 30), {"last_evening_attempt": manila(3, 21, 1)}, None),
+        (manila(4, 8, 0), {"last_evening_attempt": manila(3, 21, 1)}, "morning"),
+        (manila(3, 22, 0), {}, "evening"),  # morning missed entirely: evening still runs
+    ],
+)
+def test_due_slot_table(manila_settings, conn, when, attempts, expected):
+    for key, at in attempts.items():
+        set_meta(conn, key, at.isoformat())
+    assert scheduler.due_slot(manila_settings, conn, when) == expected
+
+
+def test_evening_disabled_never_due(manila_settings, conn):
+    manila_settings.evening_refresh_time = None
+    set_meta(conn, "last_morning_attempt", manila(3, 7, 1).isoformat())
+    assert scheduler.due_slot(manila_settings, conn, manila(3, 22, 0)) is None
+
+
+async def test_evening_job_readings_only(settings, conn, calls, monkeypatch):
+    seen = []
+    c = calls(Calls())
+
+    async def record(settings, conn, ticker, now, refresh=False):
+        seen.append(scheduler.job_status()["kind"])
+        return SimpleNamespace(ai_status="ok")
+
+    monkeypatch.setattr(scheduler, "get_reading", record)
+    add_ticker(conn, "holdings", "NVDA")
+    add_ticker(conn, "watching", "AAPL")
+    result = await scheduler.evening_job(settings, conn, NOW)
+    assert result["refreshed"] == 2
+    assert seen == ["evening", "evening"]
+    assert c.outcomes == 0 and c.discover == 0
+    assert get_meta(conn, "last_evening_attempt") == NOW.isoformat()
+    assert scheduler.job_status()["kind"] is None

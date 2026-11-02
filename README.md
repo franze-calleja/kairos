@@ -19,6 +19,10 @@ Kairos is a self-hosted, AI-assisted research tool for US stocks and ETFs. For a
 - **Quick numbers**: valuation and growth for stocks; fees, size and top holdings for ETFs
 - **Track record**: how past leans turned out 1, 5 and 20 trading days later, compared with VOO
 - **Discover**: tickers worth a look, from news spikes and funds or stocks similar to what you hold
+- **Exposure**: enter your share counts and see what you really own once ETFs are looked through (e.g. your NVDA weight across NVDA, QQQ and VOO), plus a sector breakdown. Local only.
+- **Your reason**: write one line on why you hold or watch a ticker; each reading says whether this week's news supports or challenges it
+- **Compare**: two tickers side by side, with relative performance and, for two ETFs, how much their top holdings overlap
+- **Two refreshes a day**: a full morning refresh after the US close and a readings-only evening refresh before the open
 
 All numbers are computed in code from market data. The AI (Gemini) only summarizes the supplied articles, must cite them, and never invents figures.
 
@@ -66,6 +70,7 @@ All settings live in `.env` (see `.env.example` for the full list with comments)
 | `REDDIT_ENABLED` | `false` | Optional low-volume Reddit RSS (see below) |
 | `TZ` | `UTC` | Your timezone (IANA name, e.g. `Asia/Manila`) |
 | `MORNING_REFRESH_TIME` | `07:00` | Daily automatic refresh of your lists, in `TZ`. If your computer was asleep or Kairos wasn't running at that time, the refresh runs within about 5 minutes of waking or starting (once per day). |
+| `EVENING_REFRESH_TIME` | `21:00` | Second daily refresh before the US open, in `TZ`: readings only, no Discover scan. Made up the same way if missed (until midnight). Empty disables. |
 | `READING_CACHE_HOURS` | `4` | How long a reading is reused before it is rebuilt |
 | `NEWS_WINDOW_DAYS` | `7` | Days of news read per ticker |
 | `KAIROS_SEED_HOLDINGS` / `KAIROS_SEED_WATCHING` | empty | Comma-separated tickers to pre-fill lists on first start |
@@ -81,7 +86,7 @@ After changing `.env`, run `docker compose up -d` again to apply it.
 4. Make **one** Gemini request with the articles and computed data, asking for structured output that cites article IDs. Claims citing unknown sources are dropped. With fewer than 3 articles, no AI request is made.
 5. Store the reading (SQLite) for caching and the track record.
 
-Your lists themselves are never sent to Gemini. Each AI request contains only one ticker's public news and computed market data, nothing about what you own or how much. (Like any API call, Google can see which tickers you request readings for.)
+Your lists, share counts and portfolio values are never sent to Gemini. Each AI request contains one ticker's public news and computed market data, plus your one-line reason for that ticker if you wrote one. Nothing about how much you own. (Like any API call, Google can see which tickers you request readings for.)
 
 ## Data sources and their terms
 

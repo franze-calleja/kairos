@@ -38,3 +38,18 @@ test('overview explains what to do when lists are empty', async () => {
   renderWithClient(<Overview />)
   expect(await screen.findByText(/Add tickers in the sidebar/)).toBeInTheDocument()
 })
+
+
+test('overview flags tickers whose reason is challenged', async () => {
+  server.use(
+    http.get('/api/lists', () =>
+      HttpResponse.json({
+        holdings: [row({ ticker: 'NVDA', lean: 'bullish', thesis: 'AI demand', thesis_verdict: 'challenges' })],
+        watching: [],
+      }),
+    ),
+  )
+  renderWithClient(<Overview />)
+  const nvda = await screen.findByRole('row', { name: /NVDA/ })
+  expect(within(nvda).getByLabelText('Your reason is being challenged')).toBeInTheDocument()
+})

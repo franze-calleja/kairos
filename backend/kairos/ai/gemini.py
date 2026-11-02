@@ -7,7 +7,7 @@ from google import genai
 from google.genai import errors, types
 
 from kairos.ai.budget import RequestBudget
-from kairos.ai.schema import AISummary, Claim
+from kairos.ai.schema import AISummary, Claim, ThesisCheck
 from kairos.config import Settings
 
 log = logging.getLogger(__name__)
@@ -38,6 +38,20 @@ async def _acquire(budget: RequestBudget) -> bool:
     if wait > 0:
         await _sleep(wait)
     return budget.try_acquire(_clock())
+
+
+NO_SIGNAL = ThesisCheck(verdict="no_signal", text="", source_ids=[])
+
+
+def _valid_thesis(check: ThesisCheck | None, allowed: set[str]) -> ThesisCheck | None:
+    """A verdict must rest on supplied sources; anything else is "no clear signal" with no text."""
+    if check is None:
+        return None
+    if check.verdict == "no_signal" or not check.text.strip():
+        return NO_SIGNAL
+    if check.source_ids and set(check.source_ids) <= allowed:
+        return check
+    return NO_SIGNAL
 
 
 def _valid(claims: list[Claim], allowed: set[str]) -> list[Claim]:
@@ -96,6 +110,7 @@ async def summarize(
                 "bull_case": _valid(parsed.bull_case, allowed_ids),
                 "bear_case": _valid(parsed.bear_case, allowed_ids),
                 "not_enough_signal": parsed.not_enough_signal or not drivers,
+                "thesis_check": _valid_thesis(parsed.thesis_check, allowed_ids),
                 "takeaway": next(iter(_valid([parsed.takeaway], allowed_ids)), None)
                 if parsed.takeaway
                 else None,

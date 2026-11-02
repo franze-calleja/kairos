@@ -6,7 +6,8 @@ import type { JobStatus } from '../api/schemas'
 function describe(s: JobStatus): string {
   if (s.phase === 'readings') {
     const n = Math.min(s.done + 1, s.total)
-    return s.current ? `Refreshing ${n} of ${s.total}: ${s.current}…` : 'Refreshing your tickers…'
+    const verb = s.kind === 'evening' ? 'Evening refresh' : 'Refreshing'
+    return s.current ? `${verb} ${n} of ${s.total}: ${s.current}…` : `${verb}: your tickers…`
   }
   if (s.phase === 'outcomes') return 'Updating track record…'
   if (s.phase === 'discover') {

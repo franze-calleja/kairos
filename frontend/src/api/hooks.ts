@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, errorStatus, getParsed } from './client'
 import {
   DiscoverSchema,
+  ExposureSchema,
   JobStatusSchema,
   ListEntrySchema,
   ListsSchema,
@@ -87,3 +88,31 @@ export const useJobStatus = (pollMs = { active: 2000, idle: 30_000 }) =>
     refetchInterval: (query) => (query.state.data?.running ? pollMs.active : pollMs.idle),
     refetchIntervalInBackground: true,
   })
+
+export const useExposure = () =>
+  useQuery({ queryKey: ['exposure'], queryFn: () => getParsed('/exposure', ExposureSchema) })
+
+export function useSetShares() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ ticker, shares }: { ticker: string; shares: number | null }) =>
+      ListEntrySchema.parse(
+        (await api.put(`/lists/holdings/${encodeURIComponent(ticker)}/shares`, { shares })).data,
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['lists'] })
+      qc.invalidateQueries({ queryKey: ['exposure'] })
+    },
+  })
+}
+
+export function useSetThesis() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ list, ticker, thesis }: { list: ListName; ticker: string; thesis: string | null }) =>
+      ListEntrySchema.parse(
+        (await api.put(`/lists/${list}/${encodeURIComponent(ticker)}/thesis`, { thesis })).data,
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['lists'] }),
+  })
+}

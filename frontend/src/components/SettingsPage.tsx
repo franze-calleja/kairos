@@ -37,6 +37,11 @@ export function SettingsPage() {
         <p>
           Every day at {data.morning_refresh_time} ({data.tz}). Readings are reused for {data.reading_cache_hours} hours.
         </p>
+        <p className="small">
+          {data.evening_refresh_time
+            ? `Evening refresh at ${data.evening_refresh_time}: readings only, before the US open.`
+            : 'Evening refresh: off.'}
+        </p>
         <p className="muted small">Last run: {data.last_morning_run ?? 'never'}</p>
         <button type="button" className="primary" onClick={() => run.mutate()} disabled={run.isPending}>
           Run morning refresh now

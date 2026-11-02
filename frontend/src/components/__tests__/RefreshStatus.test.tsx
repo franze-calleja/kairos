@@ -60,3 +60,14 @@ test('shows nothing when idle', async () => {
   await new Promise((r) => setTimeout(r, 120))
   expect(screen.queryByRole('status')).toBeNull()
 })
+
+
+test('names the evening refresh', async () => {
+  server.use(
+    http.get('/api/jobs/morning', () =>
+      HttpResponse.json({ ...running, kind: 'evening', phase: 'readings', done: 1, total: 9, current: 'AAPL' }),
+    ),
+  )
+  renderWithClient(<RefreshStatus pollMs={50} />)
+  expect(await screen.findByText('Evening refresh 2 of 9: AAPL…')).toBeInTheDocument()
+})

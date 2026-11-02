@@ -37,6 +37,12 @@ export function TopBar() {
       </form>
       <RefreshStatus />
       <nav className="topnav">
+        <button type="button" onClick={() => useSelection.getState().openCompare()}>
+          Compare
+        </button>
+        <button type="button" onClick={() => setView('exposure')}>
+          Exposure
+        </button>
         <button type="button" onClick={() => showTrackRecord(null)}>
           Track record
         </button>
