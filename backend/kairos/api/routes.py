@@ -179,6 +179,7 @@ def get_settings_route(conn: Conn, settings: AppSettings) -> dict:
         "tz": settings.tz,
         "reading_cache_hours": settings.reading_cache_hours,
         "last_morning_run": get_meta(conn, "last_morning_run"),
+        "last_evening_run": get_meta(conn, "last_evening_run"),
         "thresholds": {
             "micro_cap_usd": settings.micro_cap_usd,
             "price_spike_pct": settings.price_spike_pct,
