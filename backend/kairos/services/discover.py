@@ -17,6 +17,7 @@ UNIVERSE_PATH = DATA / "universe.txt"
 ETF_LIST_PATH = DATA / "etf_list.txt"
 SCAN_DAYS = 14
 MIN_RECENT = 5
+MIN_SPIKE_SCORE = 2.0  # recent news rate must be at least ~2x the ticker's usual rate
 TOP_SPIKES = 10
 MAX_SIMILAR_PER_HOLDING = 5
 
@@ -58,8 +59,8 @@ async def _spikes(
                 if 0 <= age < SCAN_DAYS:
                     counts[SCAN_DAYS - 1 - age] += 1
             recent = sum(counts[-2:])
-            if recent >= MIN_RECENT:
-                score = spike_score(counts)
+            score = spike_score(counts)
+            if recent >= MIN_RECENT and score >= MIN_SPIKE_SCORE:
                 found.append(
                     {
                         "ticker": ticker,

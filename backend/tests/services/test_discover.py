@@ -24,7 +24,12 @@ class Fake:
     async def company_news(self, client, settings, t, days, today=None):
         if not settings.finnhub_api_key:
             return AdapterResult[NewsItem](items=[], status=not_configured("finnhub"))
-        ages = [0, 0, 0, 1, 1, 1] if t in self.spiking else [5, 9]
+        if t in self.spiking:
+            ages = [0, 0, 0, 1, 1, 1]
+        elif t in getattr(self, "busy", ()):
+            ages = [d for d in range(14) for _ in range(3)]  # steady 3 articles every day
+        else:
+            ages = [5, 9]
         items = [
             NewsItem(
                 id=f"{t}{i}",
@@ -118,3 +123,12 @@ async def test_spike_scan_reports_progress(settings, conn, fake):
     )
     assert calls[-1] == (3, 3)
     assert calls[0][1] == 3
+
+
+async def test_steady_heavy_news_is_not_a_spike(settings, conn, fake):
+    settings.finnhub_api_key = "k"
+    f = Fake(spiking={"AVGO"})
+    f.busy = {"BUSY"}
+    fake(f, universe=("AVGO", "BUSY"))
+    items = await run_discover(settings, conn, NOW)
+    assert [i["ticker"] for i in items if i["reason"].startswith("news spike")] == ["AVGO"]
