@@ -73,7 +73,7 @@ After changing `.env`, run `docker compose up -d` again to apply it.
 4. Make **one** Gemini request with the articles and computed data, asking for structured output that cites article IDs. Claims citing unknown sources are dropped. With fewer than 3 articles, no AI request is made.
 5. Store the reading (SQLite) for caching and the track record.
 
-Your holdings and watchlist are **never** sent to Gemini; only public market data is.
+Your lists themselves are never sent to Gemini. Each AI request contains only one ticker's public news and computed market data, nothing about what you own or how much. (Like any API call, Google can see which tickers you request readings for.)
 
 ## Data sources and their terms
 
@@ -90,13 +90,19 @@ Kairos ships **no** market data: everyone who runs it fetches data with their ow
 
 ## Backups
 
-Your lists, readings and track record live in the `kairos-data` Docker volume.
+Your lists, readings and track record live in the `kairos-data` Docker volume. The database runs in SQLite WAL mode, so don't copy the file directly while Kairos is running: recent changes can still be in a side file. Use SQLite's backup API instead:
 
 ```bash
-# back up
-docker compose cp kairos:/app/data/kairos.db ./kairos-backup.db
-# restore (with Kairos stopped)
-docker compose stop && docker compose cp ./kairos-backup.db kairos:/app/data/kairos.db && docker compose start
+# back up (safe while running)
+docker compose exec kairos /app/backend/.venv/bin/python -c \
+  "import sqlite3; s=sqlite3.connect('/app/data/kairos.db'); d=sqlite3.connect('/app/data/backup.db'); s.backup(d); d.close()"
+docker compose cp kairos:/app/data/backup.db ./kairos-backup.db
+
+# restore
+docker compose cp ./kairos-backup.db kairos:/app/data/restore.db
+docker compose exec kairos /app/backend/.venv/bin/python -c \
+  "import sqlite3; s=sqlite3.connect('/app/data/restore.db'); d=sqlite3.connect('/app/data/kairos.db'); s.backup(d); d.close()"
+docker compose restart
 ```
 
 ## Development
