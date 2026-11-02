@@ -52,6 +52,7 @@ All settings live in `.env` (see `.env.example` for the full list with comments)
 |---|---|---|
 | `GEMINI_API_KEY` | — | Enables AI summaries |
 | `GEMINI_MODEL` | `gemini-flash-latest` | Change if Google retires a model from the free tier |
+| `GEMINI_FALLBACK_MODEL` | `gemini-flash-lite-latest` | Tried when the main model is overloaded (Google 503/504); empty disables |
 | `GEMINI_RPM` / `GEMINI_RPD` | `10` / `200` | Request budget, kept below your free-tier limits (check AI Studio) |
 | `FINNHUB_API_KEY` | — | Company news, earnings calendar, Discover spike scan |
 | `SEC_USER_AGENT` | — | Required by SEC EDGAR, e.g. `Kairos you@example.com` |

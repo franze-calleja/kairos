@@ -38,6 +38,7 @@ class FakeClient:
 
     async def generate_content(self, **kwargs):
         self.calls += 1
+        self.models_used = getattr(self, "models_used", []) + [kwargs["model"]]
         outcome = self.outcomes.pop(0)
         if isinstance(outcome, Exception):
             raise outcome
@@ -122,11 +123,11 @@ async def test_all_claims_invalid_sets_not_enough_signal(monkeypatch, keyed, bud
     assert result.not_enough_signal is True
 
 
-async def test_retry_once_then_unavailable(monkeypatch, keyed, budget):
-    client = use(monkeypatch, FakeClient([RuntimeError("boom"), None]))
+async def test_gives_up_after_three_attempts(monkeypatch, keyed, budget, clock):
+    client = use(monkeypatch, FakeClient([RuntimeError("boom"), None, RuntimeError("boom")]))
     assert await gemini.summarize(keyed, budget, "p", {"a"}, NOW) == (None, "unavailable")
-    assert client.calls == 2
-    assert budget.usage(NOW)["day"] == 2
+    assert client.calls == 3
+    assert budget.usage(clock.now)["day"] == 3
 
 
 async def test_retry_succeeds_second_time(monkeypatch, keyed, budget):
@@ -172,3 +173,36 @@ def test_client_has_timeout(monkeypatch):
     monkeypatch.setattr(gemini.genai, "Client", FakeGenai)
     gemini._client_factory("k")
     assert captured["http_options"].timeout == gemini.TIMEOUT_MS
+
+
+def overloaded(code=503):
+    return errors.ServerError(
+        code, {"error": {"code": code, "message": "overloaded", "status": "UNAVAILABLE"}}
+    )
+
+
+async def test_503_backs_off_then_succeeds(monkeypatch, keyed, budget, clock):
+    client = use(monkeypatch, FakeClient([overloaded(), summary()]))
+    result, status = await gemini.summarize(keyed, budget, "p", {"a"}, NOW)
+    assert status == "ok"
+    assert clock.slept == [gemini.TRANSIENT_BACKOFF_SECONDS[0]]
+    assert client.models_used == [keyed.gemini_model, keyed.gemini_model]
+
+
+async def test_falls_back_to_lite_model_after_repeated_overload(monkeypatch, keyed, budget, clock):
+    client = use(monkeypatch, FakeClient([overloaded(503), overloaded(504), summary()]))
+    result, status = await gemini.summarize(keyed, budget, "p", {"a"}, NOW)
+    assert status == "ok"
+    assert client.models_used == [
+        keyed.gemini_model,
+        keyed.gemini_model,
+        "gemini-flash-lite-latest",
+    ]
+    assert clock.slept == list(gemini.TRANSIENT_BACKOFF_SECONDS)
+
+
+async def test_no_fallback_configured_retries_primary(monkeypatch, keyed, budget):
+    keyed.gemini_fallback_model = None
+    client = use(monkeypatch, FakeClient([overloaded(), overloaded(), overloaded()]))
+    assert await gemini.summarize(keyed, budget, "p", {"a"}, NOW) == (None, "unavailable")
+    assert client.models_used == [keyed.gemini_model] * 3

@@ -14,6 +14,8 @@ log = logging.getLogger(__name__)
 GeminiStatus = Literal["ok", "budget_exhausted", "unavailable", "not_configured"]
 TIMEOUT_MS = 60_000
 RATE_LIMIT_BACKOFF_SECONDS = 60.0
+# Waits before the 2nd and 3rd attempt after Google reports overload (5xx) or the call fails.
+TRANSIENT_BACKOFF_SECONDS = (5.0, 20.0)
 MAX_PACING_WAIT_SECONDS = 70.0
 
 
@@ -55,13 +57,20 @@ async def summarize(
     config = types.GenerateContentConfig(
         response_mime_type="application/json", response_schema=AISummary
     )
+    # Two tries on the main model, then one on the lighter fallback model (often less loaded).
+    models = [settings.gemini_model, settings.gemini_model]
+    models.append(settings.gemini_fallback_model or settings.gemini_model)
     rate_limited = False
-    for _attempt in range(2):
+    transient = False
+    for attempt, model in enumerate(models):
+        if transient:
+            await _sleep(TRANSIENT_BACKOFF_SECONDS[attempt - 1])
+        transient = False
         if not await _acquire(budget):
             return None, "budget_exhausted"
         try:
             response = await client.aio.models.generate_content(
-                model=settings.gemini_model, contents=prompt, config=config
+                model=model, contents=prompt, config=config
             )
         except errors.APIError as e:
             if e.code == 429:
@@ -70,10 +79,12 @@ async def summarize(
                 rate_limited = True
                 await _sleep(RATE_LIMIT_BACKOFF_SECONDS)
                 continue
-            log.warning("Gemini API error %s", e.code)
+            transient = e.code >= 500
+            log.warning("Gemini API error %s (model %s)", e.code, model)
             continue
         except Exception as e:  # network errors, timeouts, SDK parsing errors
-            log.warning("Gemini call failed: %s", type(e).__name__)
+            transient = True
+            log.warning("Gemini call failed: %s (model %s)", type(e).__name__, model)
             continue
         parsed = response.parsed
         if not isinstance(parsed, AISummary):

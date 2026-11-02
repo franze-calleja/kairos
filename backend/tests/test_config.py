@@ -21,3 +21,4 @@ def test_defaults():
     assert s.reading_cache_hours == 4
     assert s.reddit_enabled is False
     assert s.gemini_model == "gemini-flash-latest"
+    assert s.gemini_fallback_model == "gemini-flash-lite-latest"

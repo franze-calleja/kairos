@@ -10,6 +10,7 @@ class Settings(BaseSettings):
 
     gemini_api_key: str | None = None
     gemini_model: str = "gemini-flash-latest"
+    gemini_fallback_model: str | None = "gemini-flash-lite-latest"
     gemini_rpm: int = 10
     gemini_rpd: int = 200
     finnhub_api_key: str | None = None
@@ -39,7 +40,13 @@ class Settings(BaseSettings):
             return [t.strip().upper() for t in value.split(",") if t.strip()]
         return value
 
-    @field_validator("gemini_api_key", "finnhub_api_key", "sec_user_agent", mode="before")
+    @field_validator(
+        "gemini_api_key",
+        "finnhub_api_key",
+        "sec_user_agent",
+        "gemini_fallback_model",
+        mode="before",
+    )
     @classmethod
     def _blank_is_none(cls, value: object) -> object:
         if isinstance(value, str) and not value.strip():
