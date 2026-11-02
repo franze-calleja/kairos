@@ -8,14 +8,21 @@ const usd = (v: number) => v.toLocaleString('en-US', { style: 'currency', curren
 
 function SharesInput({ entry }: { entry: ListEntry }) {
   const [value, setValue] = useState(entry.shares?.toString() ?? '')
+  const [invalid, setInvalid] = useState(false)
+  const [sent, setSent] = useState<number | null>(entry.shares)
   const save = useSetShares()
 
   function commit(e?: FormEvent) {
     e?.preventDefault()
     const trimmed = value.trim()
     const shares = trimmed === '' ? null : Number(trimmed)
-    if (shares !== null && Number.isNaN(shares)) return
-    if (shares === entry.shares) return
+    if (shares !== null && (!Number.isFinite(shares) || shares < 0)) {
+      setInvalid(true) // e.g. "12,5" or "Infinity": never send, never clear the saved count
+      return
+    }
+    setInvalid(false)
+    if (shares === sent) return // Enter then blur shouldn't save twice
+    setSent(shares)
     save.mutate({ ticker: entry.ticker, shares })
   }
 
@@ -29,6 +36,7 @@ function SharesInput({ entry }: { entry: ListEntry }) {
         onChange={(e) => setValue(e.target.value)}
         onBlur={() => commit()}
       />
+      {invalid && <span className="error-text">Enter a number like 12.5</span>}
       {save.isError && <span className="error-text">{apiError(save.error)}</span>}
     </form>
   )

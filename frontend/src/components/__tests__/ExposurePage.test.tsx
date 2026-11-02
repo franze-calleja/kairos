@@ -78,3 +78,22 @@ test('lists holdings without a price', async () => {
   renderWithClient(<ExposurePage />)
   expect(await screen.findByText(/No price for ZZZZ/)).toBeInTheDocument()
 })
+
+test('invalid share input is rejected with a message, not silently dropped', async () => {
+  serve()
+  let calls = 0
+  server.use(
+    http.put('/api/lists/holdings/NVDA/shares', () => {
+      calls += 1
+      return HttpResponse.json(entry({ ticker: 'NVDA', shares: 10 }))
+    }),
+  )
+  renderWithClient(<ExposurePage />)
+  const input = await screen.findByLabelText('Shares of NVDA')
+  await userEvent.clear(input)
+  await userEvent.type(input, '12,5{Enter}')
+  expect(await screen.findByText('Enter a number like 12.5')).toBeInTheDocument()
+  await userEvent.clear(input)
+  await userEvent.type(input, 'Infinity{Enter}')
+  expect(calls).toBe(0)
+})

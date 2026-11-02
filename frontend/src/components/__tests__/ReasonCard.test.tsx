@@ -49,3 +49,10 @@ test('tickers not in a list explain how to save a reason', () => {
   renderWithClient(<ReasonCard ticker="PLTR" list={null} thesis={null} reading={reading} />)
   expect(screen.getByText('Add this ticker to a list to save a reason.')).toBeInTheDocument()
 })
+
+test('a reason that could not be checked says so instead of asking to refresh', () => {
+  const unchecked: Reading = { ...reading, ai: null, ai_status: 'not_enough_signal', thesis_checked: 'AI demand' }
+  renderWithClient(<ReasonCard ticker="NVDA" list="holdings" thesis="AI demand" reading={unchecked} />)
+  expect(screen.getByText(/Couldn't check your reason this time/)).toBeInTheDocument()
+  expect(screen.queryByText('Refresh to check your updated reason')).toBeNull()
+})

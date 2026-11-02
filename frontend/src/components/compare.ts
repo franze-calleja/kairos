@@ -1,8 +1,10 @@
 type Point = { date: string; close: number }
 type Holding = { symbol: string; name: string; weight: number }
 
+const ABOUT_A_YEAR = 240 // trading days; less history would mislabel a shorter return
+
 export function oneYearReturn(history: Point[]): number | null {
-  if (history.length < 2) return null
+  if (history.length < ABOUT_A_YEAR) return null
   return (history[history.length - 1].close / history[0].close - 1) * 100
 }
 

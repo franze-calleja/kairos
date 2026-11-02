@@ -60,7 +60,7 @@ test('stock vs ETF shows — where a row does not apply', async () => {
   useSelection.setState({ compare: ['NVDA', 'VOO'] })
   renderWithClient(<ComparePage />)
   const pe = await screen.findByRole('row', { name: /P\/E/ })
-  expect(within(pe).getByText('25.9')).toBeInTheDocument()
+  expect(within(pe).getByText('25.9 (sector 30.5)')).toBeInTheDocument()
   expect(within(pe).getByText('—')).toBeInTheDocument()
 })
 
@@ -80,4 +80,23 @@ test('with only one ticker the page explains what to do next', async () => {
 test('with no tickers the page explains what to do', () => {
   renderWithClient(<ComparePage />)
   expect(screen.getByText('Enter two tickers to compare them side by side.')).toBeInTheDocument()
+})
+
+
+test('shows P/E against its sector and your reason verdict', async () => {
+  server.use(
+    http.get('/api/lists', () =>
+      HttpResponse.json({
+        holdings: [{ ticker: 'NVDA', lean: 'bullish', ai_status: 'ok', thesis: 'AI demand', thesis_verdict: 'challenges' }],
+        watching: [],
+      }),
+    ),
+  )
+  serve({ NVDA: reading, VOO: etf('VOO', 0.0003, []) })
+  useSelection.setState({ compare: ['NVDA', 'VOO'] })
+  renderWithClient(<ComparePage />)
+  const pe = await screen.findByRole('row', { name: /P\/E/ })
+  expect(within(pe).getByText('25.9 (sector 30.5)')).toBeInTheDocument()
+  const reason = await screen.findByRole('row', { name: /Your reason/ })
+  expect(within(reason).getByText('Challenges ⚠')).toBeInTheDocument()
 })

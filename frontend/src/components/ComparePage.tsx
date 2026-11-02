@@ -1,8 +1,8 @@
 import { createChart, LineSeries } from 'lightweight-charts'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { apiError } from '../api/client'
-import { useReading } from '../api/hooks'
-import type { Reading } from '../api/schemas'
+import { useLists, useReading } from '../api/hooks'
+import type { ListEntry, Reading } from '../api/schemas'
 import { normalizeTicker } from '../api/tickers'
 import { useSelection } from '../store/selection'
 import { oneYearReturn, rebase, topHoldingsOverlap } from './compare'
@@ -31,7 +31,9 @@ function plain(label: string, f: (r: Reading) => ReactNode, a: Reading, b: Readi
   return { label, a: { text: f(a) ?? '—' }, b: { text: f(b) ?? '—' } }
 }
 
-function rows(a: Reading, b: Reading): Row[] {
+const VERDICTS = { supports: 'Supports ✓', challenges: 'Challenges ⚠', mixed: 'Mixed', no_signal: 'No clear signal' } as const
+
+function rows(a: Reading, b: Reading, reasons: Record<string, ListEntry | undefined>): Row[] {
   const stock = (r: Reading, v: number | null) => (r.kind === 'stock' && v !== null ? v : null)
   const etf = (r: Reading, v: number | null) => (r.kind === 'etf' && v !== null ? v : null)
   const out: Row[] = [
@@ -49,7 +51,10 @@ function rows(a: Reading, b: Reading): Row[] {
   if (anyStock) {
     out.push(
       plain('Market cap', (r) => (stock(r, r.quick.market_cap) !== null ? money(r.quick.market_cap) : '—'), a, b),
-      plain('P/E (trailing)', (r) => (stock(r, r.quick.trailing_pe) !== null ? num(r.quick.trailing_pe) : '—'), a, b),
+      plain('P/E (trailing)', (r) => {
+        if (stock(r, r.quick.trailing_pe) === null) return '—'
+        return r.quick.sector_pe !== null ? `${num(r.quick.trailing_pe)} (sector ${num(r.quick.sector_pe)})` : num(r.quick.trailing_pe)
+      }, a, b),
       plain('Revenue growth', (r) => (stock(r, r.quick.revenue_growth) !== null ? ratioPct(r.quick.revenue_growth, 0) : '—'), a, b),
     )
   }
@@ -63,6 +68,15 @@ function rows(a: Reading, b: Reading): Row[] {
     plain('Next earnings', (r) => (r.kind === 'etf' ? '—' : (r.events.next_earnings ?? '—')), a, b),
     plain('Hype check', (r) => (r.hype.some((f) => f.triggered) ? 'Warning' : 'No warning signs'), a, b),
   )
+  if (reasons[a.ticker]?.thesis || reasons[b.ticker]?.thesis) {
+    out.push(
+      plain('Your reason', (r) => {
+        const e = reasons[r.ticker]
+        if (!e?.thesis) return '—'
+        return e.thesis_verdict ? VERDICTS[e.thesis_verdict] : 'Not checked yet'
+      }, a, b),
+    )
+  }
   return out
 }
 
@@ -140,6 +154,9 @@ export function ComparePage() {
   const rb = useReading(same ? null : tb)
   const a = ra.data
   const b = rb.data
+  const { data: lists } = useLists()
+  const reasons: Record<string, ListEntry | undefined> = {}
+  for (const e of [...(lists?.watching ?? []), ...(lists?.holdings ?? [])]) reasons[e.ticker] = e
   const overlap =
     a?.kind === 'etf' && b?.kind === 'etf' ? topHoldingsOverlap(a.quick.top_holdings, b.quick.top_holdings) : null
 
@@ -185,7 +202,7 @@ export function ComparePage() {
                 </tr>
               </thead>
               <tbody>
-                {rows(a, b).map((r) => (
+                {rows(a, b, reasons).map((r) => (
                   <tr key={r.label}>
                     <th scope="row">{r.label}</th>
                     <td>
