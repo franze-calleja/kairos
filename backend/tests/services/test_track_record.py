@@ -1,3 +1,4 @@
+import json
 from datetime import UTC, datetime, timedelta
 
 import pandas as pd
@@ -38,11 +39,11 @@ def hist(monkeypatch):
     return h
 
 
-def add_reading(conn, at=READ_AT, lean="bullish", ticker="NVDA", price=100.0):
+def add_reading(conn, at=READ_AT, lean="bullish", ticker="NVDA", price=100.0, payload="{}"):
     conn.execute(
         "INSERT INTO readings (ticker, created_at, lean, confidence, ai_status, price_at, payload)"
-        " VALUES (?, ?, ?, 'medium', ?, ?, '{}')",
-        (ticker, at.isoformat(), lean, "ok" if lean else "not_enough_signal", price),
+        " VALUES (?, ?, ?, 'medium', ?, ?, ?)",
+        (ticker, at.isoformat(), lean, "ok" if lean else "not_enough_signal", price, payload),
     )
     conn.commit()
 
@@ -108,3 +109,15 @@ def test_track_record_api(client):
     body = client.get("/api/track-record").json()
     assert body["small_sample"] is True
     assert set(body["by_lean"]) == {"bullish", "neutral", "bearish"}
+
+
+async def test_anchor_is_the_price_bar_used_not_local_date(settings, conn, hist):
+    # 07:00 in Manila on Oct 2 = Oct 1 23:00 UTC: the reading used Oct 1's close.
+    settings.tz = "Asia/Manila"
+    history = [{"date": "2026-09-30", "close": 99.0}, {"date": "2026-10-01", "close": 100.0}]
+    payload = json.dumps({"price": {"history": history}})
+    add_reading(conn, at=datetime(2026, 10, 1, 23, 0, tzinfo=UTC), payload=payload)
+    await fill_outcomes(settings, conn, READ_AT + timedelta(days=60))
+    o = outcomes(conn)
+    assert o[(1, 1)] == (1.0, 0.1)  # Oct 2 close vs Oct 1 close, VOO over the same session
+    assert o[(1, 5)] == (5.0, 0.5)

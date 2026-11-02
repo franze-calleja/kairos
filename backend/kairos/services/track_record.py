@@ -1,5 +1,6 @@
 """Track record: what happened 1/5/20 trading days after each counted reading, vs VOO."""
 
+import json
 import sqlite3
 from datetime import UTC, date, datetime
 from zoneinfo import ZoneInfo
@@ -18,7 +19,7 @@ SMALL_SAMPLE = 20
 def _counted(conn: sqlite3.Connection, tz: ZoneInfo) -> list[sqlite3.Row]:
     """First reading with a lean per (ticker, local calendar day)."""
     rows = conn.execute(
-        "SELECT id, ticker, created_at, lean, price_at FROM readings "
+        "SELECT id, ticker, created_at, lean, price_at, payload FROM readings "
         "WHERE lean IS NOT NULL AND price_at IS NOT NULL ORDER BY created_at, id"
     ).fetchall()
     seen: set[tuple[str, date]] = set()
@@ -29,6 +30,21 @@ def _counted(conn: sqlite3.Connection, tz: ZoneInfo) -> list[sqlite3.Row]:
             seen.add(key)
             out.append(r)
     return out
+
+
+def _anchor_day(row: sqlite3.Row, tz: ZoneInfo) -> date:
+    """The trading day whose close is `price_at`: the last bar in the stored price history.
+
+    A reading made before the US open (e.g. the 07:00 morning run) uses the previous close, so
+    the reading's local calendar date would shift every horizon by a session.
+    """
+    try:
+        history = json.loads(row["payload"] or "{}").get("price", {}).get("history") or []
+        if history:
+            return date.fromisoformat(history[-1]["date"])
+    except ValueError, KeyError, TypeError, AttributeError:
+        pass
+    return datetime.fromisoformat(row["created_at"]).astimezone(tz).date()
 
 
 def _close_on_or_before(closes: pd.Series, day: date) -> float | None:
@@ -59,7 +75,7 @@ async def fill_outcomes(settings: Settings, conn: sqlite3.Connection, now: datet
         series = await closes(r["ticker"])
         if series is None:
             continue
-        read_day = datetime.fromisoformat(r["created_at"]).astimezone(tz).date()
+        read_day = _anchor_day(r, tz)
         after = series[series.index.date > read_day]
         base_start = _close_on_or_before(baseline, read_day) if baseline is not None else None
         for h in HORIZONS:
