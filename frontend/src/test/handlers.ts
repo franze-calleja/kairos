@@ -4,6 +4,7 @@ export const emptyLists = { holdings: [], watching: [] }
 
 export const idleJob = {
   running: false,
+  kind: null,
   phase: null,
   done: 0,
   total: 0,

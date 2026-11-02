@@ -162,6 +162,7 @@ export const SettingsSchema = z.object({
   gemini_model: z.string(),
   budget: z.object({ minute: z.number(), day: z.number(), rpm: z.number(), rpd: z.number() }),
   morning_refresh_time: z.string(),
+  evening_refresh_time: z.string().nullable().default(null),
   tz: z.string(),
   reading_cache_hours: z.number(),
   last_morning_run: z.string().nullable(),
@@ -183,6 +184,7 @@ export type ListName = 'holdings' | 'watching'
 
 export const JobStatusSchema = z.object({
   running: z.boolean(),
+  kind: z.enum(['morning', 'evening']).nullable().default(null),
   phase: z.enum(['readings', 'outcomes', 'discover']).nullable(),
   done: z.number(),
   total: z.number(),
