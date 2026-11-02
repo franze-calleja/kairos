@@ -108,6 +108,7 @@ export const AISummarySchema = z.object({
   drivers: z.array(ClaimSchema),
   bull_case: z.array(ClaimSchema),
   bear_case: z.array(ClaimSchema),
+  takeaway: ClaimSchema.nullable().optional(),
 })
 
 export const ReadingSchema = z.object({

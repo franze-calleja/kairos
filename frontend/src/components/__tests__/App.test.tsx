@@ -1,6 +1,6 @@
 import { vi } from 'vitest'
 vi.mock('lightweight-charts', () => ({
-  createChart: () => ({ addSeries: () => ({ setData: () => {} }), timeScale: () => ({ fitContent: () => {} }), remove: () => {} }),
+  createChart: () => ({ addSeries: () => ({ setData: () => {} }), timeScale: () => ({ fitContent: () => {}, setVisibleLogicalRange: () => {} }), remove: () => {} }),
   LineSeries: {},
 }))
 import { screen } from '@testing-library/react'

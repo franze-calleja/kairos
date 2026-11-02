@@ -7,10 +7,14 @@ import { server } from '../../test/server'
 import { renderWithClient } from '../../test/utils'
 import { ReadingPanel } from '../ReadingPanel'
 
+const ranges: { from: number; to: number }[] = []
 vi.mock('lightweight-charts', () => ({
   createChart: () => ({
     addSeries: () => ({ setData: () => {} }),
-    timeScale: () => ({ fitContent: () => {} }),
+    timeScale: () => ({
+      fitContent: () => {},
+      setVisibleLogicalRange: (r: { from: number; to: number }) => ranges.push(r),
+    }),
     applyOptions: () => {},
     remove: () => {},
   }),
@@ -35,7 +39,8 @@ test('full reading renders all sections with cited sources', async () => {
   expect(screen.getAllByText('No warning signs').length).toBeGreaterThan(0)
   const verdict = screen.getByRole('region', { name: 'Verdict' })
   expect(within(verdict).getByText('Bullish')).toBeInTheDocument()
-  expect(within(verdict).getByText('Data-center guidance raised')).toBeInTheDocument()
+  expect(within(verdict).getByText('Demand is strong but export rules are the risk to watch')).toBeInTheDocument()
+  expect(within(verdict).queryByText('Data-center guidance raised')).toBeNull()
 })
 
 test('not_enough_signal hides AI cards but shows numbers', async () => {
@@ -164,4 +169,19 @@ test('chart range buttons switch the visible period', async () => {
   expect(screen.getByRole('button', { name: '1Y' })).toHaveAttribute('aria-pressed', 'true')
   await userEvent.click(oneMonth)
   expect(oneMonth).toHaveAttribute('aria-pressed', 'true')
+})
+
+
+test('older readings without a takeaway do not repeat the first driver', async () => {
+  serve({ ai: { ...reading.ai!, takeaway: null } })
+  renderWithClient(<ReadingPanel ticker="NVDA" />)
+  const verdict = await screen.findByRole('region', { name: 'Verdict' })
+  expect(within(verdict).queryByText('Data-center guidance raised')).toBeNull()
+})
+
+test('chart leaves room on the left so the first date label is not cut off', async () => {
+  serve({})
+  renderWithClient(<ReadingPanel ticker="NVDA" />)
+  await screen.findByRole('button', { name: '1Y' })
+  expect(ranges.at(-1)!.from).toBeLessThan(0)
 })

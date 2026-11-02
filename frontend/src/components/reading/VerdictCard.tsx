@@ -36,7 +36,8 @@ export function VerdictCard({
   const hype = reading.hype.some((f) => f.triggered)
   const event = eventChip(reading)
   const updated = new Date(reading.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  const takeaway = ok ? reading.ai!.drivers[0]?.text : AI_MESSAGES[reading.ai_status]
+  // Older readings have no takeaway; show nothing rather than repeating a driver.
+  const takeaway = ok ? reading.ai!.takeaway?.text : AI_MESSAGES[reading.ai_status]
 
   return (
     <section className={`card verdict verdict-${lean ?? 'none'}`} role="region" aria-label="Verdict">

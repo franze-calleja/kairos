@@ -41,6 +41,9 @@ export function PriceChart({ history }: { history: Point[] }) {
     chart.addSeries(LineSeries, { color: '#9ca3af', ...quiet }).setData(clip(movingAverage(history, 50)))
     chart.addSeries(LineSeries, { color: '#f59e0b', ...quiet }).setData(clip(movingAverage(history, 200)))
     chart.timeScale().fitContent()
+    // A little empty space on the left so the first date label isn't clipped.
+    const pad = Math.max(1, Math.round(visible.length * 0.03))
+    chart.timeScale().setVisibleLogicalRange({ from: -pad, to: visible.length - 1 + pad / 2 })
     return () => chart.remove()
   }, [history, range])
 

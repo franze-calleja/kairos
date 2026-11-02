@@ -57,6 +57,7 @@ export const reading: Reading = {
     drivers: [{ text: 'Data-center guidance raised', source_ids: ['abc'] }],
     bull_case: [{ text: 'Demand outpacing supply', source_ids: ['abc'] }],
     bear_case: [{ text: 'Export rules risk', source_ids: ['def'] }],
+    takeaway: { text: 'Demand is strong but export rules are the risk to watch', source_ids: ['abc', 'def'] },
   },
   ai_status: 'ok',
   sources: [
