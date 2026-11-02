@@ -27,3 +27,19 @@ def test_usage(conn):
     b = RequestBudget(conn, rpm=10, rpd=200, tz="UTC")
     b.try_acquire(T0)
     assert b.usage(T0) == {"minute": 1, "day": 1, "rpm": 10, "rpd": 200}
+
+
+def test_seconds_until_slot(conn):
+    b = RequestBudget(conn, rpm=2, rpd=3, tz="UTC")
+    assert b.seconds_until_slot(T0) == 0
+    b.try_acquire(T0)
+    b.try_acquire(T0 + timedelta(seconds=10))
+    wait = b.seconds_until_slot(T0 + timedelta(seconds=20))
+    assert 40 <= wait <= 41
+    b.try_acquire(T0 + timedelta(seconds=70))
+    assert b.seconds_until_slot(T0 + timedelta(seconds=80)) is None  # daily budget used up
+    assert b.day_exhausted(T0 + timedelta(seconds=80)) is True
+
+
+def test_zero_limits_never_wait(conn):
+    assert RequestBudget(conn, rpm=0, rpd=10, tz="UTC").seconds_until_slot(T0) is None

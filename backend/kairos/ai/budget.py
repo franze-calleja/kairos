@@ -30,6 +30,25 @@ class RequestBudget:
         self.conn.commit()
         return True
 
+    def day_exhausted(self, now: datetime) -> bool:
+        return self.rpd <= 0 or self._counts(now)[1] >= self.rpd
+
+    def seconds_until_slot(self, now: datetime) -> float | None:
+        """0 if a request may go now, seconds to wait for the per-minute window, None if the
+        daily budget (or a zero limit) means no request can be made today."""
+        if self.rpm <= 0 or self.day_exhausted(now):
+            return None
+        minute, _ = self._counts(now)
+        if minute < self.rpm:
+            return 0
+        now_utc = now.astimezone(UTC)
+        rows = self.conn.execute(
+            "SELECT ts FROM budget WHERE ts > ? AND ts <= ? ORDER BY ts DESC LIMIT ?",
+            ((now_utc - timedelta(seconds=60)).isoformat(), now_utc.isoformat(), self.rpm),
+        ).fetchall()
+        oldest_in_window = datetime.fromisoformat(rows[-1]["ts"])
+        return max((oldest_in_window + timedelta(seconds=60) - now_utc).total_seconds(), 0) + 0.1
+
     def usage(self, now: datetime) -> dict[str, int]:
         minute, day = self._counts(now)
         return {"minute": minute, "day": day, "rpm": self.rpm, "rpd": self.rpd}

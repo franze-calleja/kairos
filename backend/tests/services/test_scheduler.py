@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
@@ -67,12 +67,41 @@ async def test_morning_job_dedupes_lists(settings, conn, calls):
     assert c.built == ["AMD", "NVDA"]
 
 
-async def test_morning_job_stops_ai_after_budget_exhausted(settings, conn, calls):
+async def test_morning_job_stops_ai_only_when_daily_budget_used(settings, conn, calls, monkeypatch):
+    monkeypatch.setattr(scheduler, "_now", lambda: NOW)
+    c = calls(Calls(exhausted_after=1))
+    for t in ("AAA", "BBB", "CCC"):
+        add_ticker(conn, "holdings", t)
+    settings.gemini_rpd = 2
+    conn.executemany("INSERT INTO budget (ts) VALUES (?)", [(NOW.isoformat(),)] * 2)
+    await scheduler.morning_job(settings, conn, NOW)
+    assert c.rpd_seen == [2, 0, 0]
+
+
+async def test_morning_job_keeps_ai_after_per_minute_limit(settings, conn, calls, monkeypatch):
+    monkeypatch.setattr(scheduler, "_now", lambda: NOW)
     c = calls(Calls(exhausted_after=1))
     for t in ("AAA", "BBB", "CCC"):
         add_ticker(conn, "holdings", t)
     await scheduler.morning_job(settings, conn, NOW)
-    assert c.rpd_seen == [settings.gemini_rpd, 0, 0]
+    assert c.rpd_seen == [settings.gemini_rpd] * 3
+
+
+async def test_morning_job_uses_fresh_clock_per_ticker(settings, conn, calls, monkeypatch):
+    ticks = iter(NOW + timedelta(minutes=i) for i in range(10))
+    monkeypatch.setattr(scheduler, "_now", lambda: next(ticks))
+    seen = []
+    calls(Calls())
+
+    async def record(settings, conn, ticker, now, refresh=False):
+        seen.append(now)
+        return SimpleNamespace(ai_status="ok")
+
+    monkeypatch.setattr(scheduler, "get_reading", record)
+    add_ticker(conn, "holdings", "AAA")
+    add_ticker(conn, "holdings", "BBB")
+    await scheduler.morning_job(settings, conn, NOW)
+    assert len(set(seen)) == 2
 
 
 def test_start_scheduler_uses_time_and_tz(settings):

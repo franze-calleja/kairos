@@ -1,5 +1,6 @@
+import asyncio
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Literal
 
 from google import genai
@@ -11,10 +12,30 @@ from kairos.config import Settings
 
 log = logging.getLogger(__name__)
 GeminiStatus = Literal["ok", "budget_exhausted", "unavailable", "not_configured"]
+TIMEOUT_MS = 60_000
+RATE_LIMIT_BACKOFF_SECONDS = 60.0
+MAX_PACING_WAIT_SECONDS = 70.0
+
+
+def _clock() -> datetime:
+    return datetime.now(UTC)
+
+
+_sleep = asyncio.sleep
 
 
 def _client_factory(api_key: str) -> genai.Client:
-    return genai.Client(api_key=api_key)
+    return genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=TIMEOUT_MS))
+
+
+async def _acquire(budget: RequestBudget) -> bool:
+    """Wait for a per-minute slot if needed; False when the daily budget is used up."""
+    wait = budget.seconds_until_slot(_clock())
+    if wait is None or wait > MAX_PACING_WAIT_SECONDS:
+        return False
+    if wait > 0:
+        await _sleep(wait)
+    return budget.try_acquire(_clock())
 
 
 def _valid(claims: list[Claim], allowed: set[str]) -> list[Claim]:
@@ -34,8 +55,9 @@ async def summarize(
     config = types.GenerateContentConfig(
         response_mime_type="application/json", response_schema=AISummary
     )
+    rate_limited = False
     for _attempt in range(2):
-        if not budget.try_acquire(now):
+        if not await _acquire(budget):
             return None, "budget_exhausted"
         try:
             response = await client.aio.models.generate_content(
@@ -43,11 +65,15 @@ async def summarize(
             )
         except errors.APIError as e:
             if e.code == 429:
-                return None, "budget_exhausted"
-            log.warning("Gemini API error %s: %s", e.code, e)
+                if rate_limited:
+                    return None, "budget_exhausted"
+                rate_limited = True
+                await _sleep(RATE_LIMIT_BACKOFF_SECONDS)
+                continue
+            log.warning("Gemini API error %s", e.code)
             continue
-        except Exception as e:  # network errors, SDK parsing errors
-            log.warning("Gemini call failed: %s", e)
+        except Exception as e:  # network errors, timeouts, SDK parsing errors
+            log.warning("Gemini call failed: %s", type(e).__name__)
             continue
         parsed = response.parsed
         if not isinstance(parsed, AISummary):

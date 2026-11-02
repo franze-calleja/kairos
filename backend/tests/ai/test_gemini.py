@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from google.genai import errors
@@ -44,6 +44,27 @@ class FakeClient:
         return FakeResponse(outcome)
 
 
+class Clock:
+    def __init__(self):
+        self.now = NOW
+        self.slept = []
+
+    def __call__(self):
+        return self.now
+
+    async def sleep(self, seconds):
+        self.slept.append(seconds)
+        self.now = self.now + timedelta(seconds=seconds)
+
+
+@pytest.fixture(autouse=True)
+def clock(monkeypatch):
+    c = Clock()
+    monkeypatch.setattr(gemini, "_clock", c)
+    monkeypatch.setattr(gemini, "_sleep", c.sleep)
+    return c
+
+
 @pytest.fixture
 def budget(conn):
     return RequestBudget(conn, rpm=10, rpd=200, tz="UTC")
@@ -80,14 +101,6 @@ async def test_budget_exhausted_before_call(monkeypatch, keyed, conn):
     assert client.calls == 0
 
 
-async def test_429_budget_exhausted(monkeypatch, keyed, budget):
-    err = errors.ClientError(
-        429, {"error": {"code": 429, "message": "quota", "status": "RESOURCE_EXHAUSTED"}}
-    )
-    use(monkeypatch, FakeClient([err]))
-    assert await gemini.summarize(keyed, budget, "p", {"a"}, NOW) == (None, "budget_exhausted")
-
-
 async def test_drops_unknown_source_claims(monkeypatch, keyed, budget):
     parsed = summary(
         drivers=[
@@ -120,3 +133,42 @@ async def test_retry_succeeds_second_time(monkeypatch, keyed, budget):
     use(monkeypatch, FakeClient([RuntimeError("boom"), summary()]))
     result, status = await gemini.summarize(keyed, budget, "p", {"a"}, NOW)
     assert status == "ok"
+
+
+def rate_limited():
+    return errors.ClientError(
+        429, {"error": {"code": 429, "message": "quota", "status": "RESOURCE_EXHAUSTED"}}
+    )
+
+
+async def test_429_twice_budget_exhausted(monkeypatch, keyed, budget):
+    use(monkeypatch, FakeClient([rate_limited(), rate_limited()]))
+    assert await gemini.summarize(keyed, budget, "p", {"a"}, NOW) == (None, "budget_exhausted")
+
+
+async def test_429_backs_off_then_retries(monkeypatch, keyed, budget, clock):
+    use(monkeypatch, FakeClient([rate_limited(), summary()]))
+    result, status = await gemini.summarize(keyed, budget, "p", {"a"}, NOW)
+    assert status == "ok"
+    assert clock.slept == [gemini.RATE_LIMIT_BACKOFF_SECONDS]
+
+
+async def test_paces_when_minute_bucket_full(monkeypatch, keyed, conn, clock):
+    paced = RequestBudget(conn, rpm=1, rpd=10, tz="UTC")
+    assert paced.try_acquire(NOW)
+    use(monkeypatch, FakeClient([summary()]))
+    result, status = await gemini.summarize(keyed, paced, "p", {"a"}, NOW)
+    assert status == "ok"
+    assert len(clock.slept) == 1 and 60 <= clock.slept[0] <= 61
+
+
+def test_client_has_timeout(monkeypatch):
+    captured = {}
+
+    class FakeGenai:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    monkeypatch.setattr(gemini.genai, "Client", FakeGenai)
+    gemini._client_factory("k")
+    assert captured["http_options"].timeout == gemini.TIMEOUT_MS
