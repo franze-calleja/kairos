@@ -53,3 +53,39 @@ test('overview flags tickers whose reason is challenged', async () => {
   const nvda = await screen.findByRole('row', { name: /NVDA/ })
   expect(within(nvda).getByLabelText('Your reason is being challenged')).toBeInTheDocument()
 })
+
+
+test('dashboard shows stat tiles, attention list, top exposures and value columns', async () => {
+  server.use(
+    http.get('/api/lists', () =>
+      HttpResponse.json({
+        holdings: [
+          row({ ticker: 'NVDA', lean: 'bullish', price: 200, day_change_pct: -4, shares: 10, thesis_verdict: 'challenges' }),
+          row({ ticker: 'QQQ', kind: 'etf', lean: 'neutral', price: 600, day_change_pct: 2, shares: 5 }),
+        ],
+        watching: [],
+      }),
+    ),
+    http.get('/api/exposure', () =>
+      HttpResponse.json({
+        total_value: 5000,
+        positions: [
+          { ticker: 'NVDA', shares: 10, price: 200, value: 2000, weight: 0.4, name: 'NVIDIA', kind: 'stock' },
+          { ticker: 'QQQ', shares: 5, price: 600, value: 3000, weight: 0.6, name: 'QQQ', kind: 'etf' },
+        ],
+        underlying: [{ symbol: 'NVDA', name: 'NVIDIA Corporation', weight: 0.46, direct: 0.4, via: { QQQ: 0.06 } }],
+        rest_of_funds: 0.49, sectors: [], missing_prices: [],
+      }),
+    ),
+  )
+  renderWithClient(<Overview />)
+  const tiles = await screen.findByRole('region', { name: 'Portfolio summary' })
+  expect(await within(tiles).findByText('$5,000.00')).toBeInTheDocument()
+  const attention = screen.getByRole('region', { name: 'Needs attention' })
+  expect(within(attention).getByText(/Your reason is being challenged/)).toBeInTheDocument()
+  const top = screen.getByRole('region', { name: 'Top real exposures' })
+  expect(within(top).getByText('46.0%')).toBeInTheDocument()
+  const nvda = screen.getByRole('row', { name: /NVDA NVIDIA|^NVDA/ })
+  expect(within(nvda).getByText('$2,000.00')).toBeInTheDocument()
+  expect(within(nvda).getByText('40.0%')).toBeInTheDocument()
+})

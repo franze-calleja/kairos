@@ -17,6 +17,7 @@ def test_settings_no_secrets(settings):
     assert body["budget"] == {"minute": 0, "day": 0, "rpm": 10, "rpd": 200}
     assert body["last_morning_run"] is None
     assert body["evening_refresh_time"] == "21:00"
+    assert body["last_evening_run"] is None
     assert body["thresholds"]["micro_cap_usd"] == 300_000_000
 
 
