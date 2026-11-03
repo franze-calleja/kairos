@@ -103,16 +103,12 @@ Kairos ships **no** market data: everyone who runs it fetches data with their ow
 
 ## Backups
 
-Your lists, readings and track record live in the `kairos-data` Docker volume. The database runs in SQLite WAL mode, so don't copy the file directly while Kairos is running: recent changes can still be in a side file. Use SQLite's backup API instead:
+Kairos backs up its database **automatically once a day** to `./backups/` in the project folder (on your machine, outside Docker), keeping the last 14 copies (`BACKUP_KEEP`). If the computer was asleep, the backup runs shortly after it wakes. Each copy is made with SQLite's online backup API (safe while Kairos is running) and checked for integrity before it's kept. **Settings → Back up now** makes one on demand.
+
+To restore a backup:
 
 ```bash
-# back up (safe while running)
-docker compose exec kairos /app/backend/.venv/bin/python -c \
-  "import sqlite3; s=sqlite3.connect('/app/data/kairos.db'); d=sqlite3.connect('/app/data/backup.db'); s.backup(d); d.close()"
-docker compose cp kairos:/app/data/backup.db ./kairos-backup.db
-
-# restore
-docker compose cp ./kairos-backup.db kairos:/app/data/restore.db
+docker compose cp ./backups/kairos-2026-11-03.db kairos:/app/data/restore.db
 docker compose exec kairos /app/backend/.venv/bin/python -c \
   "import sqlite3; s=sqlite3.connect('/app/data/restore.db'); d=sqlite3.connect('/app/data/kairos.db'); s.backup(d); d.close()"
 docker compose restart

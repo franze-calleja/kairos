@@ -20,6 +20,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from kairos.ai.budget import RequestBudget
 from kairos.config import Settings
 from kairos.db import connect, get_meta, set_meta
+from kairos.services.backup import backup_db, backup_due
 from kairos.services.discover import run_discover
 from kairos.services.lists import list_tickers
 from kairos.services.readings import get_reading
@@ -172,6 +173,11 @@ async def makeup_tick(settings: Settings, now: datetime | None = None) -> dict |
     now = now or _now()
     conn = connect(settings.db_path)
     try:
+        if backup_due(settings, conn, now):
+            try:
+                backup_db(settings, conn, now)
+            except Exception as e:  # a failed backup must never block the refreshes
+                log.error("daily backup failed: %s", e)
         slot = due_slot(settings, conn, now)
     finally:
         conn.close()

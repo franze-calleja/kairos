@@ -1,7 +1,11 @@
 .superpowers/
 .env
 /data/
+/backups/
+backend/backups/
 backend/data/
+/backups/
+backend/backups/
 node_modules/
 dist/
 .venv/

@@ -15,6 +15,7 @@ def settings(tmp_path):
         gemini_api_key=None,
         finnhub_api_key=None,
         sec_user_agent=None,
+        backup_dir=None,  # tests that need backups set their own tmp folder
     )
 
 

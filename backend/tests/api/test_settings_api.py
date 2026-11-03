@@ -41,3 +41,15 @@ def test_job_status_endpoint(client):
     body = client.get("/api/jobs/morning").json()
     assert body["running"] is False
     assert set(body) >= {"running", "kind", "phase", "done", "total", "current", "last_run"}
+
+
+def test_backup_now_and_settings_show_it(settings, tmp_path):
+    settings.backup_dir = str(tmp_path / "backups")
+    with TestClient(create_app(settings)) as c:
+        assert c.get("/api/settings").json()["last_backup"] is None
+        r = c.post("/api/backup")
+        assert r.status_code == 201
+        assert r.json()["file"].startswith("kairos-")
+        body = c.get("/api/settings").json()
+        assert body["last_backup"] is not None
+        assert body["backup_keep"] == 14

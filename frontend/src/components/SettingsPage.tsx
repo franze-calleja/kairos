@@ -1,11 +1,12 @@
 import { apiError } from '../api/client'
-import { useRunMorningJob, useSettings } from '../api/hooks'
+import { useBackupNow, useRunMorningJob, useSettings } from '../api/hooks'
 
 const mark = (ok: boolean) => (ok ? '✓' : '✗')
 
 export function SettingsPage() {
   const { data, isPending, isError, error } = useSettings()
   const run = useRunMorningJob()
+  const backup = useBackupNow()
   if (isPending) return <p className="muted">Loading settings…</p>
   if (isError) return <p className="error-box">{apiError(error)}</p>
   const usage = Math.min(100, (data.budget.day / Math.max(data.budget.rpd, 1)) * 100)
@@ -48,6 +49,26 @@ export function SettingsPage() {
         </button>
         {run.isSuccess && <p className="small">Morning refresh started. It can take several minutes.</p>}
         {run.isError && <p className="error-text">{apiError(run.error)}</p>}
+      </section>
+      <section className="card">
+        <h3 className="card-title">Backups</h3>
+        {data.backup_dir ? (
+          <>
+            <p className="small">
+              Once a day to the <code>backups</code> folder next to Kairos; keeps the last {data.backup_keep}.
+            </p>
+            <p className="muted small">
+              Last backup: {data.last_backup ? new Date(data.last_backup).toLocaleString() : 'not yet'}
+            </p>
+            <button type="button" className="primary" onClick={() => backup.mutate()} disabled={backup.isPending}>
+              Back up now
+            </button>
+            {backup.isSuccess && <p className="small">Saved {backup.data.file}</p>}
+            {backup.isError && <p className="error-text">{apiError(backup.error)}</p>}
+          </>
+        ) : (
+          <p className="muted small">Backups are off (BACKUP_DIR is empty).</p>
+        )}
       </section>
     </article>
   )

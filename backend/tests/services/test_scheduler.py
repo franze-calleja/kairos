@@ -259,3 +259,18 @@ async def test_evening_job_readings_only(settings, conn, calls, monkeypatch):
     assert c.outcomes == 0 and c.discover == 0
     assert get_meta(conn, "last_evening_attempt") == NOW.isoformat()
     assert scheduler.job_status()["kind"] is None
+
+
+async def test_makeup_tick_backs_up_when_due(manila_settings, monkeypatch, tmp_path):
+    from kairos.db import connect, init_db
+    from kairos.services import backup
+
+    manila_settings.backup_dir = str(tmp_path / "backups")
+    init_db(connect(manila_settings.db_path), manila_settings)
+    monkeypatch.setattr(scheduler, "due_slot", lambda *a: None)
+    await scheduler.makeup_tick(manila_settings, manila(3, 9, 0))
+    assert len(list((tmp_path / "backups").glob("kairos-*.db"))) == 1
+    assert (
+        backup.backup_due(manila_settings, connect(manila_settings.db_path), manila(3, 9, 5))
+        is False
+    )
