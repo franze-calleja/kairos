@@ -2,7 +2,7 @@ from functools import lru_cache
 from typing import Annotated
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     evening_refresh_time: str | None = "21:00"  # readings only, before the US open; empty disables
     tz: str = "UTC"
     db_path: str = "data/kairos.db"
+    backup_dir: str | None = "backups"  # daily copies of the database; empty turns backups off
+    backup_keep: int = Field(default=14, ge=1)
     scheduler_enabled: bool = True
     kairos_seed_holdings: Annotated[list[str], NoDecode] = []
     kairos_seed_watching: Annotated[list[str], NoDecode] = []
@@ -87,6 +89,7 @@ class Settings(BaseSettings):
         "finnhub_api_key",
         "sec_user_agent",
         "gemini_fallback_model",
+        "backup_dir",
         mode="before",
     )
     @classmethod

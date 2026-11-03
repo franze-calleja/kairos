@@ -13,6 +13,7 @@ from kairos.config import Settings
 from kairos.db import get_meta
 from kairos.models import Reading
 from kairos.services import scheduler
+from kairos.services.backup import BackupFailed, backup_db
 from kairos.services.discover import latest_discover
 from kairos.services.exposure import compute_exposure
 from kairos.services.lists import (
@@ -180,6 +181,9 @@ def get_settings_route(conn: Conn, settings: AppSettings) -> dict:
         "reading_cache_hours": settings.reading_cache_hours,
         "last_morning_run": get_meta(conn, "last_morning_run"),
         "last_evening_run": get_meta(conn, "last_evening_run"),
+        "last_backup": get_meta(conn, "last_backup"),
+        "backup_dir": settings.backup_dir,
+        "backup_keep": settings.backup_keep,
         "thresholds": {
             "micro_cap_usd": settings.micro_cap_usd,
             "price_spike_pct": settings.price_spike_pct,
@@ -244,3 +248,12 @@ def put_thesis(name: ListName, ticker: str, body: ThesisIn, conn: Conn) -> ListE
 @router.get("/exposure")
 async def get_exposure(conn: Conn) -> dict:
     return await compute_exposure(conn, datetime.now(UTC))
+
+
+@router.post("/backup", status_code=201)
+def post_backup(conn: Conn, settings: AppSettings) -> dict[str, str]:
+    try:
+        path = backup_db(settings, conn, datetime.now(UTC))
+    except (BackupFailed, OSError, sqlite3.Error) as e:
+        raise HTTPException(status_code=500, detail=f"Backup failed: {e}") from e
+    return {"file": path.name}

@@ -9,8 +9,10 @@ services:
         required: false
     environment:
       DB_PATH: /app/data/kairos.db
+      BACKUP_DIR: /app/backups
     volumes:
       - kairos-data:/app/data
+      - ./backups:/app/backups  # daily database copies, outside the Docker volume
     restart: unless-stopped
 
 volumes:

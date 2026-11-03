@@ -26,8 +26,8 @@ RUN uv sync --frozen --no-dev
 COPY --from=frontend /frontend/dist ./kairos/static
 
 RUN useradd --create-home --uid 1000 kairos \
-    && mkdir -p /app/data \
-    && chown -R kairos:kairos /app/data
+    && mkdir -p /app/data /app/backups \
+    && chown -R kairos:kairos /app/data /app/backups
 USER kairos
 
 EXPOSE 8000

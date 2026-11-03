@@ -116,3 +116,11 @@ export function useSetThesis() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['lists'] }),
   })
 }
+
+export function useBackupNow() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async () => (await api.post<{ file: string }>('/backup')).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['settings'] }),
+  })
+}
