@@ -39,6 +39,16 @@ CREATE TABLE IF NOT EXISTS discover (
     score REAL NOT NULL
 );
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS trades (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticker TEXT NOT NULL,
+    side TEXT NOT NULL CHECK (side IN ('buy', 'sell')),
+    trade_date TEXT NOT NULL,
+    shares REAL NOT NULL CHECK (shares > 0),
+    price REAL NOT NULL CHECK (price > 0),
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_trades_ticker ON trades (ticker, trade_date, id);
 """
 
 
