@@ -70,6 +70,7 @@ class Sources:
         self.summarize_calls = 0
         self.calls = 0
         self.news_tickers = []
+        self.closes: dict[str, list[float]] = {}
 
     async def get_info(self, t):
         self.calls += 1
@@ -78,8 +79,8 @@ class Sources:
         return None, error("yfinance", "unknown ticker")
 
     async def get_history(self, t, period="1y"):
-        if t in self.info:
-            return make_df([100.0] * 260), ok("yfinance")
+        if t in self.info or t in self.closes:
+            return make_df(self.closes.get(t, [100.0] * 260)), ok("yfinance")
         return None, error("yfinance", "no price history")
 
     async def get_top_holdings(self, t):

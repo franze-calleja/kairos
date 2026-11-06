@@ -18,11 +18,13 @@ from kairos.ai.prompt import build_prompt
 from kairos.analysis.clean import clean_news
 from kairos.analysis.events import build_events, ex_dividend_from_info, load_macro
 from kairos.analysis.hype import compute_hype
+from kairos.analysis.move import compute_move
 from kairos.analysis.price_context import compute_price_context
 from kairos.analysis.quick_numbers import build_quick_numbers, kind_from_info, sector_pe_reference
 from kairos.config import Settings
 from kairos.models import AdapterResult, NewsItem, Reading, SourceStatus
 from kairos.services.lists import get_thesis
+from kairos.services.market import MARKET_TICKER, market_history
 from kairos.tickers import normalize_ticker
 
 MIN_NEWS_FOR_AI = 3
@@ -97,6 +99,7 @@ def _computed_for_prompt(reading_parts: dict[str, Any]) -> dict[str, Any]:
         "events": reading_parts["events"].model_dump(),
         "quick_numbers": reading_parts["quick"].model_dump(),
         "hype_flags": [f.model_dump() for f in reading_parts["hype"] if f.triggered],
+        "move": reading_parts["move"].model_dump() if reading_parts["move"] else None,
     }
 
 
@@ -136,6 +139,8 @@ async def build_reading(
             statuses.append(e_status)
 
     thesis = get_thesis(conn, symbol)  # only the sentence; never shares or other tickers
+    is_market = symbol == MARKET_TICKER
+    market_df = df if is_market else await market_history(get_history, now)
     cleaned = clean_news(raw)
     # Hype attention needs the full deduplicated stream, not the capped list sent to the AI.
     deduped = clean_news(raw, max_items=max(len(raw), 1))
@@ -146,6 +151,7 @@ async def build_reading(
             kind, info, holdings, fund, sector_pe_reference(info.get("sector"))
         ),
         "hype": compute_hype(settings, info, df, deduped, None, today),
+        "move": compute_move(df, now, market_df, is_market=is_market),
     }
 
     ai, ai_status = None, "not_enough_signal"

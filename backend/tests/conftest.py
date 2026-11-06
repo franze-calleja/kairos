@@ -43,3 +43,10 @@ def known_tickers(monkeypatch):
         return {"quoteType": "EQUITY"}, ok("yfinance")
 
     monkeypatch.setattr(routes, "get_info", known)
+
+
+@pytest.fixture(autouse=True)
+def fresh_market_cache():
+    from kairos.services.market import clear_market_cache
+
+    clear_market_cache()

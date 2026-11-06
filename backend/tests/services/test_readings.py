@@ -5,6 +5,7 @@ import pytest
 
 from kairos.services import readings
 from kairos.services.readings import UnknownTicker, build_reading, get_reading
+from tests.helpers import series
 from tests.services.fakes import NOW, Sources
 
 
@@ -165,3 +166,29 @@ async def test_thesis_recorded_even_when_ai_could_not_check(settings, conn, src)
     r = await build_reading(settings, conn, "NVDA", NOW)
     assert r.ai is None
     assert r.thesis_checked == "AI demand"
+
+
+async def test_reading_has_move_with_market(settings, conn, src):
+    src.closes = {"NVDA": series(last=-9.3), "VOO": series(last=-4.4)}
+    r = await build_reading(settings, conn, "NVDA", NOW)
+    assert r.move.notable is True and r.move.market_share == "half"
+    assert '"move"' in src.last_prompt
+
+
+async def test_market_history_fetched_once_per_hour(settings, conn, src, monkeypatch):
+    src.closes = {"VOO": series(last=-1.0)}
+    calls = []
+
+    async def counting(t, period="1y"):
+        calls.append(t)
+        return await src.get_history(t, period)
+
+    monkeypatch.setattr(readings, "get_history", counting)
+    await build_reading(settings, conn, "NVDA", NOW)
+    await build_reading(settings, conn, "QQQ", NOW)
+    assert calls.count("VOO") == 1
+
+
+async def test_market_fetch_failure_omits_market_only(settings, conn, src):
+    r = await build_reading(settings, conn, "NVDA", NOW)  # fakes have no VOO history
+    assert r.move is not None and r.move.market_change_pct is None
