@@ -114,3 +114,11 @@ test('dashboard link at the top returns home and shows when it is active', async
   expect(useSelection.getState()).toMatchObject({ selected: null, view: 'reading' })
   expect(dash).toHaveAttribute('aria-current', 'page')
 })
+
+test('dashboard link sits below the at-a-glance card', async () => {
+  server.use(http.get('/api/lists', () => HttpResponse.json(lists)))
+  renderWithClient(<Sidebar />)
+  const dash = await screen.findByRole('button', { name: 'Dashboard' })
+  const glance = await screen.findByRole('region', { name: 'At a glance' })
+  expect(glance.compareDocumentPosition(dash) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+})

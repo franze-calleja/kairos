@@ -118,8 +118,8 @@ export function Sidebar() {
   const { data, isError, error } = useLists()
   return (
     <aside className="sidebar">
-      <DashboardLink />
       <SidebarSummary />
+      <DashboardLink />
       {isError && <p className="error-text">{apiError(error)}</p>}
       <ListSection title="My Holdings" list="holdings" entries={data?.holdings ?? []} />
       <ListSection title="Watching" list="watching" entries={data?.watching ?? []} />
