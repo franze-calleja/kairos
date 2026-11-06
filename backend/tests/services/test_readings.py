@@ -192,3 +192,11 @@ async def test_market_history_fetched_once_per_hour(settings, conn, src, monkeyp
 async def test_market_fetch_failure_omits_market_only(settings, conn, src):
     r = await build_reading(settings, conn, "NVDA", NOW)  # fakes have no VOO history
     assert r.move is not None and r.move.market_change_pct is None
+
+
+async def test_second_reading_records_lean_change(settings, conn, src):
+    await build_reading(settings, conn, "NVDA", NOW - timedelta(hours=12))
+    src.lean = "neutral"
+    r = await build_reading(settings, conn, "NVDA", NOW)
+    (lean,) = [i for i in r.changes.items if i.kind == "lean"]
+    assert (lean.before, lean.after) == ("bullish", "neutral")

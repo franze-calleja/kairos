@@ -15,6 +15,7 @@ from kairos.adapters.sec import recent_filings
 from kairos.ai.budget import RequestBudget
 from kairos.ai.gemini import summarize
 from kairos.ai.prompt import build_prompt
+from kairos.analysis.changes import compute_changes
 from kairos.analysis.clean import clean_news
 from kairos.analysis.events import build_events, ex_dividend_from_info, load_macro
 from kairos.analysis.hype import compute_hype
@@ -190,6 +191,11 @@ async def build_reading(
         thesis_checked=thesis,  # what was sent for checking; ai may still be None
         **parts,
     )
+    previous = _latest(conn, symbol)
+    previous_ai = _latest(conn, symbol, ai_ok=True)
+    reading = reading.model_copy(
+        update={"changes": compute_changes(reading, previous, previous_ai)}
+    )
     conn.execute(
         "INSERT INTO readings (ticker, created_at, lean, confidence, ai_status, price_at, payload)"
         " VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -207,12 +213,18 @@ async def build_reading(
     return reading
 
 
-def latest_reading(conn: sqlite3.Connection, ticker: str) -> Reading | None:
+def _latest(conn: sqlite3.Connection, symbol: str, ai_ok: bool = False) -> Reading | None:
+    only_ok = " AND ai_status = 'ok'" if ai_ok else ""
     row = conn.execute(
-        "SELECT payload FROM readings WHERE ticker = ? ORDER BY created_at DESC, id DESC LIMIT 1",
-        (normalize_ticker(ticker),),
+        f"SELECT payload FROM readings WHERE ticker = ?{only_ok} "
+        "ORDER BY created_at DESC, id DESC LIMIT 1",
+        (symbol,),
     ).fetchone()
     return Reading.model_validate_json(row["payload"]) if row else None
+
+
+def latest_reading(conn: sqlite3.Connection, ticker: str) -> Reading | None:
+    return _latest(conn, normalize_ticker(ticker))
 
 
 async def get_reading(

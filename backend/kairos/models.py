@@ -66,6 +66,21 @@ class Move(BaseModel):
     market_share: Literal["market", "half", "ticker", "opposite"] | None = None
 
 
+class ChangeItem(BaseModel):
+    """One thing that differs from an earlier reading of the same ticker."""
+
+    kind: Literal["lean", "verdict", "price_label", "hype", "target", "new_articles"]
+    before: str | None = None
+    after: str | None = None
+    count: int | None = None  # new_articles only
+    since: datetime  # the reading this item compares against
+
+
+class Changes(BaseModel):
+    since: datetime  # the immediately previous reading
+    items: list[ChangeItem]
+
+
 class MacroEvent(BaseModel):
     date: date
     kind: Literal["FOMC", "CPI"]
@@ -128,3 +143,4 @@ class Reading(BaseModel):
     data_health: list[SourceStatus]
     thesis_checked: str | None = None  # the owner's reason this reading evaluated, if any
     move: Move | None = None
+    changes: Changes | None = None

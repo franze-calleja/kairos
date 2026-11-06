@@ -72,6 +72,7 @@ class Sources:
         self.news_tickers = []
         self.closes: dict[str, list[float]] = {}
         self.move_reason: Claim | None = None
+        self.lean = "bullish"
 
     async def get_info(self, t):
         self.calls += 1
@@ -131,7 +132,7 @@ class Sources:
         return AISummary(
             thesis_check=thesis_check,
             move_reason=self.move_reason,
-            lean="bullish",
+            lean=self.lean,
             confidence="medium",
             not_enough_signal=False,
             substantive_news=True,
