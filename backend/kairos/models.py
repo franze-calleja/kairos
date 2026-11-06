@@ -82,6 +82,13 @@ class QuickNumbers(BaseModel):
     expense_ratio: float | None = None
     aum: float | None = None
     top_holdings: list[Holding] = []
+    # Analysts' 12-month price targets (stocks only; other people's opinion, shown as such)
+    target_mean: float | None = None
+    target_median: float | None = None
+    target_low: float | None = None
+    target_high: float | None = None
+    analyst_count: int | None = None
+    analyst_rating: str | None = None
 
 
 class HypeFlag(BaseModel):

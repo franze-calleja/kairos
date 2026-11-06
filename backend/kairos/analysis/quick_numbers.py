@@ -4,6 +4,14 @@ from typing import Any, Literal
 
 from kairos.models import Holding, QuickNumbers
 
+RATINGS = {
+    "strong_buy": "Strong buy",
+    "buy": "Buy",
+    "hold": "Hold",
+    "underperform": "Underperform",
+    "sell": "Sell",
+    "strong_sell": "Strong sell",
+}
 SECTOR_PE_PATH = Path(__file__).parent.parent / "data" / "sector_pe.json"
 
 
@@ -50,4 +58,10 @@ def build_quick_numbers(
         sector_pe=sector_pe,
         revenue_growth=_num(info.get("revenueGrowth")),
         profit_margin=_num(info.get("profitMargins")),
+        target_mean=_num(info.get("targetMeanPrice")),
+        target_median=_num(info.get("targetMedianPrice")),
+        target_low=_num(info.get("targetLowPrice")),
+        target_high=_num(info.get("targetHighPrice")),
+        analyst_count=int(n) if (n := _num(info.get("numberOfAnalystOpinions"))) else None,
+        analyst_rating=RATINGS.get(str(info.get("recommendationKey") or "").lower()),
     )

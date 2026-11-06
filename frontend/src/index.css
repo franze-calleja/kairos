@@ -42,10 +42,14 @@ h3 {
   margin: 0;
 }
 
+/* App shell: fixed to the viewport so the top bar and sidebar stay put and
+   only the sidebar and main column scroll (each on its own). */
 .app {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 /* Top bar */
@@ -599,6 +603,19 @@ h3 {
 }
 
 @media (max-width: 760px) {
+  /* Narrow screens: one page scroll, top bar pinned. */
+  .app {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
   .layout {
     flex-direction: column;
   }
@@ -607,6 +624,11 @@ h3 {
     width: 100%;
     border-right: none;
     border-bottom: 1px solid var(--line);
+    overflow-y: visible;
+  }
+
+  .main {
+    overflow-y: visible;
   }
 
   .two-col {
@@ -1268,4 +1290,64 @@ h3 {
   .tiles {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* Analyst targets */
+.target-line {
+  margin: 0 0 2px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.target-range {
+  margin: 10px 0 6px;
+}
+
+.target-track {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--neutral-bg);
+}
+
+.target-mean,
+.target-now,
+.key-mean,
+.key-now {
+  display: inline-block;
+  border-radius: 50%;
+}
+
+.target-mean,
+.target-now {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--panel);
+}
+
+.target-mean,
+.key-mean {
+  background: var(--accent);
+}
+
+.target-now,
+.key-now {
+  background: var(--ink);
+}
+
+.key-mean,
+.key-now {
+  width: 8px;
+  height: 8px;
+  margin: 0 3px 0 8px;
+}
+
+.target-ends {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
 }

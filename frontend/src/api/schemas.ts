@@ -86,6 +86,12 @@ export const QuickNumbersSchema = z.object({
   expense_ratio: num,
   aum: num,
   top_holdings: z.array(HoldingSchema),
+  target_mean: z.number().nullable().optional(),
+  target_median: z.number().nullable().optional(),
+  target_low: z.number().nullable().optional(),
+  target_high: z.number().nullable().optional(),
+  analyst_count: z.number().nullable().optional(),
+  analyst_rating: z.string().nullable().optional(),
 })
 
 export const HypeFlagSchema = z.object({

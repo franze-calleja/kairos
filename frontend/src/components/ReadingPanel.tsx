@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { apiError } from '../api/client'
 import { useLists, useReading, useRefreshReading } from '../api/hooks'
 import { AddMoreCard } from './reading/AddMoreCard'
+import { AnalystTargetsCard } from './reading/AnalystTargetsCard'
 import { BullBearCard } from './reading/BullBearCard'
 import { DataHealth } from './reading/DataHealth'
 import { DriversCard } from './reading/DriversCard'
@@ -70,6 +71,7 @@ export function ReadingPanel({ ticker }: { ticker: string }) {
       <div className="rail">
         <div className="rail-main">
           {reading.price && <PriceChart history={reading.price.history} />}
+          <AnalystTargetsCard quick={reading.quick} price={reading.price?.last_price ?? null} />
           {showAI && (
             <>
               <DriversCard ai={reading.ai!} sources={reading.sources} />

@@ -58,3 +58,31 @@ def test_sector_pe_reference(tmp_path):
     assert sector_pe_reference("Technology", p) == 31.5
     assert sector_pe_reference("Energy", p) is None
     assert sector_pe_reference(None, p) is None
+
+
+def test_analyst_targets_for_stocks():
+    info = {
+        **STOCK_INFO,
+        "targetMeanPrice": 327.14,
+        "targetMedianPrice": 315.0,
+        "targetLowPrice": 180.0,
+        "targetHighPrice": 515.0,
+        "numberOfAnalystOpinions": 58,
+        "recommendationKey": "strong_buy",
+    }
+    q = build_quick_numbers("stock", info, [], {}, None)
+    assert (q.target_mean, q.target_median, q.target_low, q.target_high) == (
+        327.14,
+        315.0,
+        180.0,
+        515.0,
+    )
+    assert q.analyst_count == 58
+    assert q.analyst_rating == "Strong buy"
+
+
+def test_no_analyst_targets_when_missing_or_etf():
+    q = build_quick_numbers("stock", {**STOCK_INFO, "recommendationKey": "none"}, [], {}, None)
+    assert q.target_mean is None and q.analyst_count is None and q.analyst_rating is None
+    etf = build_quick_numbers("etf", {"quoteType": "ETF", "targetMeanPrice": 1.0}, [], {}, None)
+    assert etf.target_mean is None
