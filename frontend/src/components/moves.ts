@@ -3,6 +3,7 @@ import { daysBetween, dollars } from './format'
 import { PRICE_LABELS_LONG } from './lean'
 
 export const MAX_BIGGEST_MOVES = 5
+const MARKET_TICKER = 'VOO' // the S&P 500 baseline the backend compares against
 
 const LEANS: Record<string, string> = { bullish: 'Bullish', neutral: 'Neutral', bearish: 'Bearish' }
 const VERDICTS: Record<string, string> = {
@@ -139,7 +140,10 @@ export function biggestMoves(entries: ListEntry[]): BiggestMoves {
   const latest = unique.filter((e) => e.move_date === date)
   return {
     date,
-    marketChangePct: latest.find((e) => e.market_change_pct != null)?.market_change_pct ?? null,
+    marketChangePct:
+      latest.find((e) => e.market_change_pct != null)?.market_change_pct ??
+      latest.find((e) => e.ticker === MARKET_TICKER)?.move_change_pct ??
+      null,
     marketNotable: latest.some((e) => e.market_notable),
     rows: latest
       .filter((e) => e.move_notable)

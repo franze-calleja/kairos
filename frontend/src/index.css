@@ -156,6 +156,10 @@ h3 {
   border-left-color: var(--accent);
 }
 
+.side-home {
+  margin: 4px 0 10px;
+}
+
 .side-ticker {
   flex: 1;
   display: flex;

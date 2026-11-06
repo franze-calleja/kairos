@@ -102,11 +102,24 @@ function DiscoverSection() {
   )
 }
 
+function DashboardLink() {
+  const active = useSelection((s) => s.selected === null && s.view === 'reading')
+  const goHome = useSelection((s) => s.goHome)
+  return (
+    <div className={`side-row side-home ${active ? 'is-selected' : ''}`}>
+      <button type="button" className="side-ticker" onClick={goHome} aria-current={active ? 'page' : undefined}>
+        <b>Dashboard</b>
+      </button>
+    </div>
+  )
+}
+
 export function Sidebar() {
   const { data, isError, error } = useLists()
   return (
     <aside className="sidebar">
       <SidebarSummary />
+      <DashboardLink />
       {isError && <p className="error-text">{apiError(error)}</p>}
       <ListSection title="My Holdings" list="holdings" entries={data?.holdings ?? []} />
       <ListSection title="Watching" list="watching" entries={data?.watching ?? []} />
