@@ -12,6 +12,6 @@ export function fmtShares(shares: number): string {
 
 /** "+$12.44" / "−$5.66" */
 export function signedUsd(v: number): string {
-  const sign = v > 0 ? '+' : v < 0 ? '−' : ''
+  const sign = v > 0 ? '+' : v < 0 ? '-' : '' // same minus as pct()
   return `${sign}$${Math.abs(v).toFixed(2)}`
 }

@@ -298,7 +298,7 @@ export const PositionSchema = z.object({
 export const KairosSaidSchema = z.object({
   price_label: z.enum(['stretched', 'near_average', 'below_range', 'insufficient_history']).nullable(),
   lean: LeanSchema.nullable(),
-  ai_status: z.string(),
+  ai_status: AIStatusSchema,
 })
 
 export const HistoryRowSchema = z.object({
