@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useExposure, useJobStatus, useLists } from '../api/hooks'
 import type { Exposure, ListEntry } from '../api/schemas'
 import { useSelection } from '../store/selection'
+import { BiggestMovesCard } from './BiggestMovesCard'
 import { leanCounts, localDate, needsAttention, portfolioToday } from './dashboard'
 import { pct } from './format'
 import { LeanPill } from './LeanPill'
@@ -143,6 +144,8 @@ export function Overview() {
           )}
         </div>
       </section>
+
+      <BiggestMovesCard entries={all} />
 
       <div className="rail">
         <section className="card" role="region" aria-label="Needs attention">

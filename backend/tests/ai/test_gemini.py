@@ -274,3 +274,15 @@ async def test_verdict_without_text_becomes_no_signal(monkeypatch, keyed, budget
     use(monkeypatch, FakeClient([summary(thesis_check=empty)]))
     result, _ = await gemini.summarize(keyed, budget, "p", {"a"}, NOW)
     assert result.thesis_check.verdict == "no_signal"
+
+
+async def test_move_reason_kept_when_cited_dropped_when_not(monkeypatch, keyed, budget):
+    use(
+        monkeypatch,
+        FakeClient([summary(move_reason=Claim(text="Chip sell-off", source_ids=["a"]))]),
+    )
+    result, _ = await gemini.summarize(keyed, budget, "p", {"a"}, NOW)
+    assert result.move_reason.text == "Chip sell-off"
+    use(monkeypatch, FakeClient([summary(move_reason=Claim(text="Made up", source_ids=["zz"]))]))
+    result, _ = await gemini.summarize(keyed, budget, "p", {"a"}, NOW)
+    assert result.move_reason is None

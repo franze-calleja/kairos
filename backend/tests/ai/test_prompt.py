@@ -51,3 +51,10 @@ def test_prompt_includes_quoted_thesis():
     assert "Thesis to evaluate" in prompt
     assert json.dumps(thesis) in prompt
     assert "Thesis to evaluate" not in build_prompt("NVDA", "NVIDIA", "stock", [_item()], {})
+
+
+def test_prompt_asks_for_move_reason_only_when_notable():
+    p = build_prompt(
+        "NVDA", "NVIDIA", "stock", [_item()], {"move": {"notable": True, "change_pct": -9.3}}
+    )
+    assert "move_reason" in p and "only if move.notable is true" in p

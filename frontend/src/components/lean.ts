@@ -14,3 +14,10 @@ export const PRICE_LABELS_SHORT = {
   below_range: 'Well below range',
   insufficient_history: 'Not enough history',
 } as const
+
+export const PRICE_LABELS_LONG = {
+  stretched: 'Stretched above its averages',
+  near_average: 'Near its long-term average',
+  below_range: 'Well below its recent range',
+  insufficient_history: 'Not enough price history',
+} as const

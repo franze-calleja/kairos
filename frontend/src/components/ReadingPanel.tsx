@@ -13,6 +13,7 @@ import { QuickNumbersCard } from './reading/QuickNumbersCard'
 import { ReasonCard } from './reading/ReasonCard'
 import { SourcesList } from './reading/SourcesList'
 import { VerdictCard } from './reading/VerdictCard'
+import { WhyItMovedCard } from './reading/WhyItMovedCard'
 
 function ReadingSkeleton({ ticker }: { ticker: string }) {
   return (
@@ -70,8 +71,9 @@ export function ReadingPanel({ ticker }: { ticker: string }) {
       {refresh.isError && <p className="error-box">{apiError(refresh.error)}</p>}
       <div className="rail">
         <div className="rail-main">
+          <WhyItMovedCard reading={reading} />
           {reading.price && <PriceChart history={reading.price.history} />}
-          <AnalystTargetsCard quick={reading.quick} price={reading.price?.last_price ?? null} />
+          <AnalystTargetsCard quick={reading.quick} price={reading.price?.last_price ?? null} ticker={reading.ticker} />
           {showAI && (
             <>
               <DriversCard ai={reading.ai!} sources={reading.sources} />

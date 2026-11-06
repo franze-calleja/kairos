@@ -52,6 +52,36 @@ class PriceContext(BaseModel):
     history: list[PricePoint]
 
 
+class Move(BaseModel):
+    """The last completed trading day's move, in context. All numbers computed, never AI."""
+
+    date: date
+    change_pct: float
+    typical_pct: float | None  # the ticker's normal daily swing before this day
+    notable: bool
+    biggest_since: date | None = None  # notable only; None = biggest in the history window
+    market_open: bool = False  # an in-progress session was excluded
+    history_start: date | None = None  # first completed close we have (short for new listings)
+    market_change_pct: float | None = None  # S&P 500 (VOO) on the same date
+    market_notable: bool | None = None
+    market_share: Literal["market", "half", "ticker", "opposite"] | None = None
+
+
+class ChangeItem(BaseModel):
+    """One thing that differs from an earlier reading of the same ticker."""
+
+    kind: Literal["lean", "verdict", "price_label", "hype", "target", "new_articles"]
+    before: str | None = None
+    after: str | None = None
+    count: int | None = None  # new_articles only
+    since: datetime  # the reading this item compares against
+
+
+class Changes(BaseModel):
+    since: datetime  # the immediately previous reading
+    items: list[ChangeItem]
+
+
 class MacroEvent(BaseModel):
     date: date
     kind: Literal["FOMC", "CPI"]
@@ -113,3 +143,5 @@ class Reading(BaseModel):
     sources: list[NewsItem]
     data_health: list[SourceStatus]
     thesis_checked: str | None = None  # the owner's reason this reading evaluated, if any
+    move: Move | None = None
+    changes: Changes | None = None

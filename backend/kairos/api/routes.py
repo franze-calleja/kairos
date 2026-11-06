@@ -54,6 +54,13 @@ class ListEntry(BaseModel):
     shares: float | None = None
     thesis: str | None = None
     thesis_verdict: str | None = None
+    move_date: str | None = None
+    move_notable: bool | None = None
+    move_change_pct: float | None = None
+    move_typical_pct: float | None = None
+    move_reason: str | None = None
+    market_change_pct: float | None = None
+    market_notable: bool | None = None
     # Internal: what the latest reading checked; not part of the API response.
     thesis_checked: str | None = Field(default=None, exclude=True)
     thesis_verdict_raw: str | None = Field(default=None, exclude=True)
@@ -82,6 +89,8 @@ def _summary(conn: sqlite3.Connection, ticker: str) -> ListEntry:
         return ListEntry(ticker=ticker)
     reading = Reading.model_validate_json(row["payload"])
     price = reading.price
+    move = reading.move
+    ai_reason = reading.ai.move_reason if reading.ai and reading.ai_status == "ok" else None
     return ListEntry(
         ticker=ticker,
         lean=row["lean"],
@@ -100,6 +109,13 @@ def _summary(conn: sqlite3.Connection, ticker: str) -> ListEntry:
         thesis_verdict_raw=reading.ai.thesis_check.verdict
         if reading.ai and reading.ai.thesis_check
         else None,
+        move_date=move.date.isoformat() if move else None,
+        move_notable=move.notable if move else None,
+        move_change_pct=move.change_pct if move else None,
+        move_typical_pct=move.typical_pct if move else None,
+        move_reason=ai_reason.text if ai_reason else None,
+        market_change_pct=move.market_change_pct if move else None,
+        market_notable=move.market_notable if move else None,
     )
 
 

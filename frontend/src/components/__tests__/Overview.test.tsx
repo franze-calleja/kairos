@@ -89,3 +89,62 @@ test('dashboard shows stat tiles, attention list, top exposures and value column
   expect(within(nvda).getByText('$2,000.00')).toBeInTheDocument()
   expect(within(nvda).getByText('40.0%')).toBeInTheDocument()
 })
+
+const mv = (o: Record<string, unknown>) =>
+  row({ move_date: '2026-11-05', move_notable: false, move_change_pct: 0.3, move_typical_pct: 1, ...o })
+
+function serveLists(holdings: unknown[], watching: unknown[] = []) {
+  server.use(http.get('/api/lists', () => HttpResponse.json({ holdings, watching })))
+}
+
+test('biggest moves lists unusual movers with reasons and opens a reading', async () => {
+  serveLists(
+    [
+      mv({ ticker: 'NVDA', move_notable: true, move_change_pct: -9.3, move_typical_pct: 2.5, market_change_pct: -4.4, move_reason: 'Chip sell-off on spending fears' }),
+      mv({ ticker: 'VOO', kind: 'etf', market_notable: true }),
+    ],
+    [
+      mv({ ticker: 'META', move_notable: true, move_change_pct: -4.0, move_typical_pct: 1.5, market_change_pct: -4.4 }),
+      mv({ ticker: 'TSLA', move_notable: true, move_change_pct: -6.0, move_typical_pct: 1.0, market_change_pct: -4.4, ai_status: 'budget_exhausted' }),
+      mv({ ticker: 'AAPL', move_date: '2026-10-29', move_notable: true, move_change_pct: -5 }),
+    ],
+  )
+  renderWithClient(<Overview />)
+  const card = await screen.findByRole('region', { name: 'Biggest moves' })
+  expect(within(card).getByText('S&P 500 down 4.4% on Thu Nov 5 — a big day for the whole market')).toBeInTheDocument()
+  const rows = within(card).getAllByRole('button')
+  expect(rows.map((r) => r.textContent)).toEqual([
+    expect.stringContaining('TSLA'),
+    expect.stringContaining('NVDA'),
+    expect.stringContaining('META'),
+  ])
+  expect(within(rows[0]).getByText('AI read not available')).toBeInTheDocument()
+  expect(within(rows[1]).getByText('-9.3%')).toBeInTheDocument()
+  expect(within(rows[1]).getByText('Chip sell-off on spending fears')).toBeInTheDocument()
+  expect(within(rows[2]).getByText('About the same as the market; no company-specific news found')).toBeInTheDocument()
+  expect(within(card).getByText('1 ticker not refreshed for this day')).toBeInTheDocument()
+  await userEvent.click(rows[1])
+  expect(useSelection.getState().selected).toBe('NVDA')
+})
+
+test('biggest moves: no unusual moves, and plain header without a big market day', async () => {
+  serveLists([mv({ ticker: 'NVDA', market_change_pct: -0.2 })])
+  renderWithClient(<Overview />)
+  const card = await screen.findByRole('region', { name: 'Biggest moves' })
+  expect(within(card).getByText('S&P 500 down 0.2% on Thu Nov 5')).toBeInTheDocument()
+  expect(within(card).getByText('No unusual moves on the last trading day.')).toBeInTheDocument()
+})
+
+test('biggest moves: a notable row without a reason and unlike the market', async () => {
+  serveLists([mv({ ticker: 'NVDA', move_notable: true, move_change_pct: -9, market_change_pct: -1 })])
+  renderWithClient(<Overview />)
+  const card = await screen.findByRole('region', { name: 'Biggest moves' })
+  expect(within(card).getByText('No company-specific news found')).toBeInTheDocument()
+})
+
+test('biggest moves is hidden until readings have move data', async () => {
+  serveLists([row({ ticker: 'NVDA' })])
+  renderWithClient(<Overview />)
+  await screen.findByRole('row', { name: /NVDA/ })
+  expect(screen.queryByRole('region', { name: 'Biggest moves' })).not.toBeInTheDocument()
+})

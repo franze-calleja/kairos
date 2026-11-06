@@ -114,6 +114,9 @@ async def summarize(
                 "takeaway": next(iter(_valid([parsed.takeaway], allowed_ids)), None)
                 if parsed.takeaway
                 else None,
+                "move_reason": next(iter(_valid([parsed.move_reason], allowed_ids)), None)
+                if parsed.move_reason
+                else None,
             }
         )
         return result, "ok"

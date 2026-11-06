@@ -15,14 +15,17 @@ from kairos.adapters.sec import recent_filings
 from kairos.ai.budget import RequestBudget
 from kairos.ai.gemini import summarize
 from kairos.ai.prompt import build_prompt
+from kairos.analysis.changes import compute_changes
 from kairos.analysis.clean import clean_news
 from kairos.analysis.events import build_events, ex_dividend_from_info, load_macro
 from kairos.analysis.hype import compute_hype
+from kairos.analysis.move import compute_move
 from kairos.analysis.price_context import compute_price_context
 from kairos.analysis.quick_numbers import build_quick_numbers, kind_from_info, sector_pe_reference
 from kairos.config import Settings
 from kairos.models import AdapterResult, NewsItem, Reading, SourceStatus
 from kairos.services.lists import get_thesis
+from kairos.services.market import MARKET_TICKER, market_history
 from kairos.tickers import normalize_ticker
 
 MIN_NEWS_FOR_AI = 3
@@ -97,6 +100,7 @@ def _computed_for_prompt(reading_parts: dict[str, Any]) -> dict[str, Any]:
         "events": reading_parts["events"].model_dump(),
         "quick_numbers": reading_parts["quick"].model_dump(),
         "hype_flags": [f.model_dump() for f in reading_parts["hype"] if f.triggered],
+        "move": reading_parts["move"].model_dump() if reading_parts["move"] else None,
     }
 
 
@@ -136,6 +140,8 @@ async def build_reading(
             statuses.append(e_status)
 
     thesis = get_thesis(conn, symbol)  # only the sentence; never shares or other tickers
+    is_market = symbol == MARKET_TICKER
+    market_df = df if is_market else await market_history(get_history, now)
     cleaned = clean_news(raw)
     # Hype attention needs the full deduplicated stream, not the capped list sent to the AI.
     deduped = clean_news(raw, max_items=max(len(raw), 1))
@@ -146,6 +152,7 @@ async def build_reading(
             kind, info, holdings, fund, sector_pe_reference(info.get("sector"))
         ),
         "hype": compute_hype(settings, info, df, deduped, None, today),
+        "move": compute_move(df, now, market_df, is_market=is_market),
     }
 
     ai, ai_status = None, "not_enough_signal"
@@ -184,6 +191,11 @@ async def build_reading(
         thesis_checked=thesis,  # what was sent for checking; ai may still be None
         **parts,
     )
+    previous = _latest(conn, symbol)
+    previous_ai = _latest(conn, symbol, ai_ok=True)
+    reading = reading.model_copy(
+        update={"changes": compute_changes(reading, previous, previous_ai)}
+    )
     conn.execute(
         "INSERT INTO readings (ticker, created_at, lean, confidence, ai_status, price_at, payload)"
         " VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -201,12 +213,18 @@ async def build_reading(
     return reading
 
 
-def latest_reading(conn: sqlite3.Connection, ticker: str) -> Reading | None:
+def _latest(conn: sqlite3.Connection, symbol: str, ai_ok: bool = False) -> Reading | None:
+    only_ok = " AND ai_status = 'ok'" if ai_ok else ""
     row = conn.execute(
-        "SELECT payload FROM readings WHERE ticker = ? ORDER BY created_at DESC, id DESC LIMIT 1",
-        (normalize_ticker(ticker),),
+        f"SELECT payload FROM readings WHERE ticker = ?{only_ok} "
+        "ORDER BY created_at DESC, id DESC LIMIT 1",
+        (symbol,),
     ).fetchone()
     return Reading.model_validate_json(row["payload"]) if row else None
+
+
+def latest_reading(conn: sqlite3.Connection, ticker: str) -> Reading | None:
+    return _latest(conn, normalize_ticker(ticker))
 
 
 async def get_reading(

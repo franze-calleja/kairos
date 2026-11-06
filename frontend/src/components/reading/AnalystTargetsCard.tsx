@@ -1,42 +1,54 @@
 import type { Reading } from '../../api/schemas'
-import { pct } from '../format'
+import { dollars } from '../format'
+import { analystPosition } from './analyst'
 import { Card } from './Card'
 
-const usd = (v: number) => `$${v.toFixed(2)}`
+function fromToday(target: number, price: number): string {
+  const p = Math.round((target / price - 1) * 100)
+  const sign = p > 0 ? '+' : p < 0 ? '−' : ''
+  return `${sign}${Math.abs(p)}% from today`
+}
+
+function Box({ label, value, price, highlight = false }: { label: string; value: number; price: number | null; highlight?: boolean }) {
+  return (
+    <div className={highlight ? 'target-box mid' : 'target-box'}>
+      <div className="target-box-label">{label}</div>
+      <div className="target-box-value">{dollars(value)}</div>
+      {price ? <div className={value >= price ? 'up small' : 'down small'}>{fromToday(value, price)}</div> : null}
+    </div>
+  )
+}
 
 /** Wall Street analysts' 12-month targets: other people's opinion, labelled as such. */
-export function AnalystTargetsCard({ quick, price }: { quick: Reading['quick']; price: number | null }) {
+export function AnalystTargetsCard({
+  quick,
+  price,
+  ticker,
+}: {
+  quick: Reading['quick']
+  price: number | null
+  ticker?: string
+}) {
   const { target_mean: mean, target_low: low, target_high: high, analyst_count: count } = quick
   if (mean == null || !count) return null
-  const upside = price ? (mean / price - 1) * 100 : null
-  const span = low != null && high != null && high > low ? high - low : null
-  const at = (v: number) => `${Math.min(100, Math.max(0, ((v - low!) / span!) * 100))}%`
+  const range = low != null && high != null && high >= low
 
   return (
-    <Card title="Analyst targets (12 months)">
-      <p className="target-line">
-        <b className="tile-big">{usd(mean)}</b>{' '}
-        {upside !== null && <span className={upside >= 0 ? 'up' : 'down'}>{pct(upside)} vs today</span>}
+    <Card title="What analysts expect (12 months)" className="analyst-targets">
+      <p>
+        On average, <b>{count} analysts</b> think {ticker ?? 'the stock'} will be around <b>{dollars(mean)}</b> in a
+        year.{price ? <> Today it's <b>${price.toFixed(2)}</b>.</> : null}
       </p>
+      <div className={range ? 'target-boxes' : 'target-boxes single'}>
+        {range && <Box label="Lowest" value={low} price={price} />}
+        <Box label="Average" value={mean} price={price} highlight />
+        {range && <Box label="Highest" value={high} price={price} />}
+      </div>
+      {range && price ? <p>{analystPosition(price, low, high)}</p> : null}
       <p className="muted small">
-        Average of {count} analysts{quick.target_median != null ? ` · median ${usd(quick.target_median)}` : ''}
-        {quick.analyst_rating ? ` · Average rating: ${quick.analyst_rating}` : ''}
+        {quick.analyst_rating ? `Average rating: ${quick.analyst_rating} · ` : ''}These are analysts' opinions, not a
+        Kairos forecast. Analysts are often too optimistic.
       </p>
-      {span !== null && (
-        <div className="target-range" title={`Low ${usd(low!)} · average ${usd(mean)} · high ${usd(high!)}`}>
-          <div className="target-track">
-            <span className="target-mean" style={{ left: at(mean) }} aria-hidden="true" />
-            {price !== null && <span className="target-now" style={{ left: at(price) }} aria-hidden="true" />}
-          </div>
-          <div className="target-ends muted small">
-            <span>{`${usd(low!)} – ${usd(high!)}`}</span>
-            <span>
-              <i className="key-now" /> today <i className="key-mean" /> average
-            </span>
-          </div>
-        </div>
-      )}
-      <p className="muted small">These are analysts' opinions, not a Kairos forecast.</p>
     </Card>
   )
 }
