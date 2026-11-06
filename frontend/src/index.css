@@ -1293,63 +1293,40 @@ h3 {
 }
 
 /* Analyst targets */
-.target-line {
-  margin: 0 0 2px;
-  display: flex;
-  align-items: baseline;
+.target-boxes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
+  margin: 12px 0;
 }
 
-.target-range {
-  margin: 10px 0 6px;
+.target-boxes.single {
+  grid-template-columns: minmax(0, 180px);
 }
 
-.target-track {
-  position: relative;
-  height: 8px;
-  border-radius: 4px;
-  background: var(--neutral-bg);
+.target-box {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  text-align: center;
 }
 
-.target-mean,
-.target-now,
-.key-mean,
-.key-now {
-  display: inline-block;
-  border-radius: 50%;
+.target-box.mid {
+  border-color: #4f46e5;
+  background: #eef2ff;
 }
 
-.target-mean,
-.target-now {
-  position: absolute;
-  top: 50%;
-  width: 12px;
-  height: 12px;
-  transform: translate(-50%, -50%);
-  border: 2px solid var(--panel);
+.target-box-label {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
-.target-mean,
-.key-mean {
-  background: var(--accent);
-}
-
-.target-now,
-.key-now {
-  background: var(--ink);
-}
-
-.key-mean,
-.key-now {
-  width: 8px;
-  height: 8px;
-  margin: 0 3px 0 8px;
-}
-
-.target-ends {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 4px;
+.target-box-value {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 2px 0;
 }
 
 /* Why it moved */

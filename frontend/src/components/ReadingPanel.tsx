@@ -73,7 +73,7 @@ export function ReadingPanel({ ticker }: { ticker: string }) {
         <div className="rail-main">
           <WhyItMovedCard reading={reading} />
           {reading.price && <PriceChart history={reading.price.history} />}
-          <AnalystTargetsCard quick={reading.quick} price={reading.price?.last_price ?? null} />
+          <AnalystTargetsCard quick={reading.quick} price={reading.price?.last_price ?? null} ticker={reading.ticker} />
           {showAI && (
             <>
               <DriversCard ai={reading.ai!} sources={reading.sources} />
