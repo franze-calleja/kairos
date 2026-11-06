@@ -185,3 +185,13 @@ test('chart leaves room on the left so the first date label is not cut off', asy
   await screen.findByRole('button', { name: '1Y' })
   expect(ranges.at(-1)!.from).toBeLessThan(0)
 })
+
+test('why it moved is the first card in the main column, above the chart', async () => {
+  serve({
+    move: { date: '2026-10-30', change_pct: 2.3, typical_pct: 2.5, notable: false },
+  })
+  const { container } = renderWithClient(<ReadingPanel ticker="NVDA" />)
+  expect(await screen.findByText('Why it moved')).toBeInTheDocument()
+  const main = container.querySelector('.rail-main')!
+  expect(main.firstElementChild).toHaveClass('why-moved')
+})

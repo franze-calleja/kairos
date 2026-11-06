@@ -1351,3 +1351,31 @@ h3 {
   justify-content: space-between;
   margin-top: 4px;
 }
+
+/* Why it moved */
+.move-headline {
+  font-size: 15px;
+  margin: 0 0 6px;
+}
+
+.move-headline.notable {
+  font-weight: 600;
+}
+
+.card-subtitle {
+  margin: 14px 0 6px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.changes {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.changes li {
+  margin: 3px 0;
+}
