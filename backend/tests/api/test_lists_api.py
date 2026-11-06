@@ -78,3 +78,19 @@ def test_put_thesis_roundtrip_and_limit(client):
         client.put("/api/lists/watching/SMH/thesis", json={"thesis": "x" * 201}).status_code == 422
     )
     assert client.put("/api/lists/holdings/SMH/thesis", json={"thesis": "x"}).status_code == 404
+
+
+def test_list_entry_shares_source(client, conn):
+    from datetime import UTC, date, datetime
+
+    from kairos.services.trades import add_trade
+
+    client.post("/api/lists/holdings", json={"ticker": "NVDA"})
+    client.post("/api/lists/holdings", json={"ticker": "VOO"})
+    client.put("/api/lists/holdings/NVDA/shares", json={"shares": 5})
+    client.put("/api/lists/holdings/VOO/shares", json={"shares": 1.5})
+    now = datetime(2026, 11, 6, 20, 0, tzinfo=UTC)
+    add_trade(conn, "NVDA", "buy", date(2026, 11, 2), price=180.0, now=now, shares=2)
+    holdings = {e["ticker"]: e for e in client.get("/api/lists").json()["holdings"]}
+    assert (holdings["NVDA"]["shares"], holdings["NVDA"]["shares_source"]) == (2, "trades")
+    assert (holdings["VOO"]["shares"], holdings["VOO"]["shares_source"]) == (1.5, "manual")

@@ -28,7 +28,14 @@ from kairos.services.lists import (
 from kairos.services.portfolio import build_portfolio
 from kairos.services.readings import DataUnavailable, UnknownTicker, get_reading
 from kairos.services.track_record import stats
-from kairos.services.trades import Trade, TradeError, add_trade, delete_trade, list_trades
+from kairos.services.trades import (
+    Trade,
+    TradeError,
+    add_trade,
+    delete_trade,
+    list_trades,
+    net_shares,
+)
 from kairos.tickers import normalize_ticker
 
 router = APIRouter(prefix="/api")
@@ -55,6 +62,7 @@ class ListEntry(BaseModel):
     hype_warning: bool | None = None
     updated_at: str | None = None
     shares: float | None = None
+    shares_source: Literal["trades", "manual"] | None = None
     thesis: str | None = None
     thesis_verdict: str | None = None
     move_date: str | None = None
@@ -76,6 +84,12 @@ def _entry(conn: sqlite3.Connection, ticker: str, name: ListName | None = None) 
             "SELECT shares, thesis FROM lists WHERE list_name = ? AND ticker = ?", (name, ticker)
         ).fetchone()
     extra = {"shares": mine["shares"], "thesis": mine["thesis"]} if mine else {}
+    if mine and name == "holdings":
+        logged = net_shares(conn, ticker)
+        if logged is not None:  # logged trades are the source of truth once there are any
+            extra |= {"shares": logged, "shares_source": "trades"}
+        elif mine["shares"] is not None:
+            extra["shares_source"] = "manual"
     entry = _summary(conn, ticker)
     if mine and mine["thesis"] and entry.thesis_checked == mine["thesis"]:
         extra["thesis_verdict"] = entry.thesis_verdict_raw
