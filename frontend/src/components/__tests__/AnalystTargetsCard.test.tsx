@@ -57,3 +57,16 @@ test('renders nothing without analyst coverage', () => {
   const { container } = render(<AnalystTargetsCard quick={reading.quick} price={204.64} />)
   expect(container).toBeEmptyDOMElement()
 })
+
+test('cheap stocks show targets with cents', () => {
+  render(
+    <AnalystTargetsCard
+      quick={{ ...nvda, target_mean: 4.62, target_low: 3.5, target_high: 6.25, analyst_count: 1 }}
+      price={4.12}
+      ticker="TINY"
+    />,
+  )
+  expect(screen.getAllByText('$4.62')).toHaveLength(2)
+  expect(screen.getByText('$3.50')).toBeInTheDocument()
+  expect(screen.getByText('$6.25')).toBeInTheDocument()
+})

@@ -15,6 +15,11 @@ export function money(value: number | null | undefined): string {
   return `$${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
 }
 
+/** Prices with cents below $20 (cheap stocks), whole dollars above. */
+export function dollars(value: number): string {
+  return Math.abs(value) < 20 ? `$${value.toFixed(2)}` : `$${Math.round(value)}`
+}
+
 export function num(value: number | null | undefined, digits = 1): string {
   return value === null || value === undefined ? '—' : value.toFixed(digits)
 }

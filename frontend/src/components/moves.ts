@@ -1,5 +1,5 @@
 import type { ChangeItem, ListEntry, Move } from '../api/schemas'
-import { daysBetween } from './format'
+import { daysBetween, dollars } from './format'
 import { PRICE_LABELS_LONG } from './lean'
 
 export const MAX_BIGGEST_MOVES = 5
@@ -30,13 +30,26 @@ function monthDay(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+const FULL_YEAR_DAYS = 330 // ~a year of trading history
+
+function monthsBetween(fromIso: string, toIso: string): number {
+  const a = localDate(fromIso)
+  const b = localDate(toIso)
+  return (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth()) - (b.getDate() < a.getDate() ? 1 : 0)
+}
+
 /** How long since a same-direction move this big: months, weeks (2-4), or null when recent. */
-export function sinceWhen(moveDate: string, biggestSince: string | null | undefined): string | null {
-  if (!biggestSince) return 'in the past year'
-  const a = localDate(biggestSince)
-  const b = localDate(moveDate)
-  const months =
-    (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth()) - (b.getDate() < a.getDate() ? 1 : 0)
+export function sinceWhen(
+  moveDate: string,
+  biggestSince: string | null | undefined,
+  historyStart?: string | null,
+): string | null {
+  if (!biggestSince) {
+    if (!historyStart || daysBetween(historyStart, moveDate) >= FULL_YEAR_DAYS) return 'in the past year'
+    const have = monthsBetween(historyStart, moveDate)
+    return `in its ${have} month${have === 1 ? '' : 's'} of price history`
+  }
+  const months = monthsBetween(biggestSince, moveDate)
   if (months >= 1) return `in ${months} month${months === 1 ? '' : 's'}`
   const weeks = Math.floor(daysBetween(biggestSince, moveDate) / 7)
   return weeks >= 2 ? `in ${weeks} weeks` : null
@@ -48,7 +61,7 @@ export function moveHeadline(move: Move, ticker: string): string {
   const start =
     move.change_pct === 0 ? `Unchanged on ${day}` : `${move.change_pct < 0 ? 'Down' : 'Up'} ${size}% on ${day}`
   if (move.notable) {
-    const when = sinceWhen(move.date, move.biggest_since)
+    const when = sinceWhen(move.date, move.biggest_since, move.history_start)
     const what = move.change_pct < 0 ? 'drop' : 'gain'
     return when ? `${start} — its biggest one-day ${what} ${when}.` : `${start} — an unusually big move for ${ticker}.`
   }
@@ -94,7 +107,7 @@ export function changeText(item: ChangeItem, headerSince: string): string {
     case 'hype':
       return a === 'warning' ? 'Hype warning signs appeared' : 'Hype warning signs cleared'
     case 'target':
-      return `Average analyst target: $${Math.round(Number(b))} → $${Math.round(Number(a))}`
+      return `Average analyst target: ${dollars(Number(b))} → ${dollars(Number(a))}`
     case 'new_articles': {
       const n = item.count ?? 0
       return `${n} new article${n === 1 ? '' : 's'} read`

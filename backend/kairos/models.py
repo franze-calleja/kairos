@@ -61,6 +61,7 @@ class Move(BaseModel):
     notable: bool
     biggest_since: date | None = None  # notable only; None = biggest in the history window
     market_open: bool = False  # an in-progress session was excluded
+    history_start: date | None = None  # first completed close we have (short for new listings)
     market_change_pct: float | None = None  # S&P 500 (VOO) on the same date
     market_notable: bool | None = None
     market_share: Literal["market", "half", "ticker", "opposite"] | None = None

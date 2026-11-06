@@ -82,6 +82,7 @@ def compute_move(
         notable=notable,
         biggest_since=_biggest_since(returns, change) if notable else None,
         market_open=len(closes) < len(all_closes),
+        history_start=_day(closes.index[0]),
     )
     if market_df is None or market_df.empty:
         return move

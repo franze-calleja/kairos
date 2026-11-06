@@ -100,3 +100,18 @@ test('biggestMoves keeps only latest-date notable rows, ranked by unusualness', 
   expect(r.marketNotable).toBe(true)
   expect(biggestMoves([e('E', { move_date: null })]).date).toBeNull()
 })
+
+test('a short price history never claims "in the past year"', () => {
+  expect(sinceWhen('2026-11-05', null, '2026-07-01')).toBe('in its 4 months of price history')
+  expect(sinceWhen('2026-11-05', null, '2025-11-06')).toBe('in the past year')
+  expect(moveHeadline({ ...notableDrop, history_start: '2026-08-20' }, 'NEWCO')).toBe(
+    'Down 9.3% on Thu Nov 5 — its biggest one-day drop in its 2 months of price history.',
+  )
+})
+
+test('cheap-stock targets keep cents', () => {
+  const since = '2026-11-05T13:00:00+00:00'
+  expect(changeText({ kind: 'target', before: '4.10', after: '4.40', since } as ChangeItem, since)).toBe(
+    'Average analyst target: $4.10 → $4.40',
+  )
+})

@@ -83,3 +83,8 @@ def test_short_history_and_flat_move_are_safe():
     assert flat.change_pct == 0 and flat.market_share is None
     assert compute_move(make_df([100.0], end="2026-11-05"), AFTER_CLOSE) is None
     assert compute_move(None, AFTER_CLOSE) is None
+
+
+def test_history_start_recorded_for_short_and_full_histories():
+    short = make_df(series(n=60, last=-9.3), end="2026-11-05")
+    assert compute_move(short, AFTER_CLOSE).history_start == short.index[0].date()

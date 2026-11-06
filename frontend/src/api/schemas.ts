@@ -142,6 +142,7 @@ export const MoveSchema = z.object({
   notable: z.boolean(),
   biggest_since: z.string().nullable().optional(),
   market_open: z.boolean().optional(),
+  history_start: z.string().nullable().optional(),
   market_change_pct: z.number().nullable().optional(),
   market_notable: z.boolean().nullable().optional(),
   market_share: z.enum(['market', 'half', 'ticker', 'opposite']).nullable().optional(),

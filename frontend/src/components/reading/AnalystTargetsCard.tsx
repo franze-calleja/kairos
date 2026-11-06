@@ -1,8 +1,7 @@
 import type { Reading } from '../../api/schemas'
+import { dollars } from '../format'
 import { analystPosition } from './analyst'
 import { Card } from './Card'
-
-const dollars = (v: number) => `$${Math.round(v)}`
 
 function fromToday(target: number, price: number): string {
   const p = Math.round((target / price - 1) * 100)
