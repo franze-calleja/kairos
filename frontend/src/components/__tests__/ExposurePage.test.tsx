@@ -2,6 +2,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { expect, test } from 'vitest'
+import { useSelection } from '../../store/selection'
 import { server } from '../../test/server'
 import { renderWithClient } from '../../test/utils'
 import { ExposurePage } from '../ExposurePage'
@@ -96,4 +97,18 @@ test('invalid share input is rejected with a message, not silently dropped', asy
   await userEvent.clear(input)
   await userEvent.type(input, 'Infinity{Enter}')
   expect(calls).toBe(0)
+})
+
+test('holdings with logged buys show their shares read-only with a link to My buys', async () => {
+  serve(exposure, [
+    entry({ ticker: 'NVDA', shares: 0.3268, shares_source: 'trades' }),
+    entry({ ticker: 'QQQ', shares: 5, shares_source: 'manual' }),
+  ])
+  renderWithClient(<ExposurePage />)
+  const link = await screen.findByRole('button', { name: '0.3268 · from My buys' })
+  expect(screen.queryByRole('textbox', { name: 'Shares of NVDA' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('spinbutton', { name: 'Shares of NVDA' })).not.toBeInTheDocument()
+  expect(screen.getByLabelText('Shares of QQQ')).toBeInTheDocument()
+  await userEvent.click(link)
+  expect(useSelection.getState().view).toBe('buys')
 })
