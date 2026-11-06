@@ -52,6 +52,20 @@ class PriceContext(BaseModel):
     history: list[PricePoint]
 
 
+class Move(BaseModel):
+    """The last completed trading day's move, in context. All numbers computed, never AI."""
+
+    date: date
+    change_pct: float
+    typical_pct: float | None  # the ticker's normal daily swing before this day
+    notable: bool
+    biggest_since: date | None = None  # notable only; None = biggest in the history window
+    market_open: bool = False  # an in-progress session was excluded
+    market_change_pct: float | None = None  # S&P 500 (VOO) on the same date
+    market_notable: bool | None = None
+    market_share: Literal["market", "half", "ticker", "opposite"] | None = None
+
+
 class MacroEvent(BaseModel):
     date: date
     kind: Literal["FOMC", "CPI"]
@@ -113,3 +127,4 @@ class Reading(BaseModel):
     sources: list[NewsItem]
     data_health: list[SourceStatus]
     thesis_checked: str | None = None  # the owner's reason this reading evaluated, if any
+    move: Move | None = None
