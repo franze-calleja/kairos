@@ -120,3 +120,53 @@ test('a typed price is not overwritten by the close lookup', async () => {
   await new Promise((r) => setTimeout(r, 50))
   expect(price()).toHaveValue(180.25)
 })
+
+function servePerTicker(closes: Record<string, number>) {
+  server.use(
+    http.get('/api/prices/:ticker/close', ({ params }) =>
+      HttpResponse.json({ date: '2026-11-06', close: closes[String(params.ticker)] }),
+    ),
+  )
+}
+
+test('changing the ticker and pressing Enter loads its price instead of saving with the old one', async () => {
+  servePerTicker({ NVDA: 181.6, QQQ: 647.05 })
+  const sent = captureTrades()
+  renderWithClient(<AddTradeForm />)
+  await userEvent.type(ticker(), 'NVDA')
+  await userEvent.tab()
+  await waitFor(() => expect(price()).toHaveValue(181.6))
+  await userEvent.type(amount(), '25')
+  await userEvent.clear(ticker())
+  await userEvent.type(ticker(), 'QQQ{Enter}')
+  await waitFor(() => expect(price()).toHaveValue(647.05))
+  expect(sent).toHaveLength(0)
+  expect(screen.getByText('Got the price for QQQ. Check it, then press Save.')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(sent[0]).toMatchObject({ ticker: 'QQQ', price: 647.05 }))
+})
+
+test('changing the date keeps a price you typed', async () => {
+  serveClose()
+  renderWithClient(<AddTradeForm />)
+  await userEvent.type(ticker(), 'NVDA')
+  await userEvent.tab()
+  await waitFor(() => expect(price()).toHaveValue(181.6))
+  await userEvent.clear(price())
+  await userEvent.type(price(), '180.25')
+  await userEvent.clear(screen.getByLabelText('US trade date'))
+  await userEvent.type(screen.getByLabelText('US trade date'), '2026-11-05')
+  expect(price()).toHaveValue(180.25)
+})
+
+test('closes are rounded to cents in the form and when saved', async () => {
+  serveClose(181.6000061)
+  const sent = captureTrades()
+  renderWithClient(<AddTradeForm />)
+  await userEvent.type(ticker(), 'NVDA')
+  await userEvent.tab()
+  await waitFor(() => expect(price()).toHaveValue(181.6))
+  await userEvent.type(amount(), '25')
+  await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+  await waitFor(() => expect(sent[0]).toMatchObject({ price: 181.6 }))
+})

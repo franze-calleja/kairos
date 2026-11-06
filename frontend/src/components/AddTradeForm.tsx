@@ -8,6 +8,9 @@ import { shortDay } from './moves'
 type Side = 'buy' | 'sell'
 type Mode = 'amount' | 'shares'
 
+/** Cents for normal prices, 4 decimals for sub-$1 ones; drops Yahoo's float noise. */
+const roundPrice = (v: number) => Number(v.toFixed(v >= 1 ? 2 : 4))
+
 /** Log a buy or sell. The price defaults to that day's close and can be edited. */
 export function AddTradeForm() {
   const [side, setSide] = useState<Side>('buy')
@@ -17,11 +20,12 @@ export function AddTradeForm() {
   const [date, setDate] = useState(nyToday)
   const [qty, setQty] = useState('')
   const [typedPrice, setTypedPrice] = useState<string | null>(null) // null = use the close
+  const [notice, setNotice] = useState<string | null>(null)
   const close = useClose(lookup, date)
   const { data: portfolio } = usePortfolio()
   const save = useAddTrade()
 
-  const priceText = typedPrice ?? (close.data ? String(close.data.close) : '')
+  const priceText = typedPrice ?? (close.data ? String(roundPrice(close.data.close)) : '')
   const price = Number(priceText)
   const quantity = Number(qty)
   const position = portfolio?.positions.find((p) => p.ticker === lookup)
@@ -39,7 +43,14 @@ export function AddTradeForm() {
   function submit(e: FormEvent) {
     e.preventDefault()
     const t = normalizeTicker(tickerText)
+    if (t && t !== lookup) {
+      // The ticker changed without leaving the field: load its own price before saving.
+      commitTicker()
+      setNotice(`Got the price for ${t}. Check it, then press Save.`)
+      return
+    }
     if (!t || !(price > 0) || !(quantity > 0)) return
+    setNotice(null)
     const trade: NewTrade = { ticker: t, side, date, price, ...(mode === 'amount' ? { amount: quantity } : { shares: quantity }) }
     save.mutate(trade, { onSuccess: () => setQty('') })
   }
@@ -68,10 +79,7 @@ export function AddTradeForm() {
           aria-label="US trade date"
           value={date}
           max={nyToday()}
-          onChange={(e) => {
-            setDate(e.target.value)
-            setTypedPrice(null)
-          }}
+          onChange={(e) => setDate(e.target.value)} // a typed fill price is kept
         />
         <div className="ranges" role="group" aria-label="Amount or shares">
           <button type="button" aria-pressed={mode === 'amount'} onClick={() => setMode('amount')}>
@@ -120,6 +128,7 @@ export function AddTradeForm() {
           </button>
         )}
       </p>
+      {notice && <p className="small">{notice}</p>}
       <p className="muted small">Bought after midnight your time? Use the previous day (US date).</p>
       {save.isError && <p className="error-text">{apiError(save.error)}</p>}
     </section>
