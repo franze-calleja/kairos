@@ -83,3 +83,18 @@ test('delete asks inline, then deletes; a refusal is shown', async () => {
   await userEvent.click(within(voo).getByRole('button', { name: 'Yes' }))
   expect(await screen.findByText("Can't delete this buy")).toBeInTheDocument()
 })
+
+test('a reading without an AI lean shows only its Add more? label', async () => {
+  server.use(
+    http.get('/api/portfolio', () =>
+      HttpResponse.json({
+        ...portfolio,
+        history: [{ ...portfolio.history[0], kairos_said: { price_label: 'near_average', lean: null, ai_status: 'unavailable' } }],
+      }),
+    ),
+  )
+  renderWithClient(<BuysPage />)
+  const table = await screen.findByRole('table', { name: 'Buy history' })
+  expect(within(table).getByText('Near long-term avg')).toBeInTheDocument()
+  expect(within(table).queryByText('No reading yet')).not.toBeInTheDocument()
+})

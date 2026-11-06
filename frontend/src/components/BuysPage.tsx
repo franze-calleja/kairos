@@ -140,7 +140,9 @@ function HistoryTable({ history }: { history: HistoryRow[] }) {
                     {h.kairos_said.price_label && (
                       <span className="pill">{PRICE_LABELS_SHORT[h.kairos_said.price_label]}</span>
                     )}{' '}
-                    <LeanPill lean={h.kairos_said.lean} aiStatus={h.kairos_said.ai_status} />
+                    {(h.kairos_said.lean || h.kairos_said.ai_status === 'not_enough_signal') && (
+                      <LeanPill lean={h.kairos_said.lean} aiStatus={h.kairos_said.ai_status} />
+                    )}
                   </>
                 ) : (
                   <span className="muted small">no reading that day</span>
