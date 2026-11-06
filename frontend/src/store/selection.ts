@@ -8,6 +8,7 @@ interface SelectionState {
   trackTicker: string | null
   compare: [string | null, string | null]
   select: (ticker: string) => void
+  goHome: () => void
   setView: (view: View) => void
   showTrackRecord: (ticker: string | null) => void
   openCompare: (first?: string) => void
@@ -19,6 +20,7 @@ export const useSelection = create<SelectionState>((set) => ({
   trackTicker: null,
   compare: [null, null],
   select: (ticker) => set({ selected: ticker, view: 'reading' }),
+  goHome: () => set({ selected: null, view: 'reading' }),
   setView: (view) => set({ view }),
   showTrackRecord: (ticker) => set({ view: 'track', trackTicker: ticker }),
   openCompare: (first) =>

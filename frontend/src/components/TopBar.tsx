@@ -9,7 +9,7 @@ export function TopBar() {
   const select = useSelection((s) => s.select)
   const setView = useSelection((s) => s.setView)
   const showTrackRecord = useSelection((s) => s.showTrackRecord)
-  const goHome = () => useSelection.setState({ selected: null, view: 'reading' })
+  const goHome = useSelection((s) => s.goHome)
 
   function submit(e: FormEvent) {
     e.preventDefault()

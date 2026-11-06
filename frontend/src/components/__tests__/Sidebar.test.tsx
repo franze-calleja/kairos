@@ -100,3 +100,17 @@ test('discover says when the news-spike scan failed', async () => {
   renderWithClient(<Sidebar />)
   expect(await screen.findByText(/News-spike scan failed/)).toBeInTheDocument()
 })
+
+test('dashboard link at the top returns home and shows when it is active', async () => {
+  server.use(http.get('/api/lists', () => HttpResponse.json(lists)))
+  useSelection.setState({ selected: null, view: 'reading' })
+  renderWithClient(<Sidebar />)
+  const dash = await screen.findByRole('button', { name: 'Dashboard' })
+  expect(dash).toHaveAttribute('aria-current', 'page')
+  await userEvent.click(await screen.findByRole('button', { name: /^NVDA/ }))
+  expect(dash).not.toHaveAttribute('aria-current')
+  useSelection.setState({ view: 'settings' })
+  await userEvent.click(dash)
+  expect(useSelection.getState()).toMatchObject({ selected: null, view: 'reading' })
+  expect(dash).toHaveAttribute('aria-current', 'page')
+})
