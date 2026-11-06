@@ -1,13 +1,7 @@
 import type { Reading } from '../../api/schemas'
 import { pct } from '../format'
+import { PRICE_LABELS_LONG as LABELS } from '../lean'
 import { Card } from './Card'
-
-const LABELS = {
-  stretched: 'Stretched above its averages',
-  near_average: 'Near its long-term average',
-  below_range: 'Well below its recent range',
-  insufficient_history: 'Not enough price history',
-} as const
 
 export function AddMoreCard({ price }: { price: NonNullable<Reading['price']> }) {
   return (

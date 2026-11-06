@@ -26,6 +26,13 @@ export const ListEntrySchema = z.object({
   shares: z.number().nullable().default(null),
   thesis: z.string().nullable().default(null),
   thesis_verdict: z.enum(['supports', 'challenges', 'mixed', 'no_signal']).nullable().default(null),
+  move_date: z.string().nullable().default(null),
+  move_notable: z.boolean().nullable().default(null),
+  move_change_pct: z.number().nullable().default(null),
+  move_typical_pct: z.number().nullable().default(null),
+  move_reason: z.string().nullable().default(null),
+  market_change_pct: z.number().nullable().default(null),
+  market_notable: z.boolean().nullable().default(null),
 })
 export const ListsSchema = z.object({
   holdings: z.array(ListEntrySchema),
@@ -125,7 +132,30 @@ export const AISummarySchema = z.object({
   bear_case: z.array(ClaimSchema),
   takeaway: ClaimSchema.nullable().optional(),
   thesis_check: ThesisCheckSchema.nullable().optional(),
+  move_reason: ClaimSchema.nullable().optional(),
 })
+
+export const MoveSchema = z.object({
+  date: z.string(),
+  change_pct: z.number(),
+  typical_pct: num,
+  notable: z.boolean(),
+  biggest_since: z.string().nullable().optional(),
+  market_open: z.boolean().optional(),
+  market_change_pct: z.number().nullable().optional(),
+  market_notable: z.boolean().nullable().optional(),
+  market_share: z.enum(['market', 'half', 'ticker', 'opposite']).nullable().optional(),
+})
+
+export const ChangeItemSchema = z.object({
+  kind: z.enum(['lean', 'verdict', 'price_label', 'hype', 'target', 'new_articles']),
+  before: z.string().nullable().optional(),
+  after: z.string().nullable().optional(),
+  count: z.number().nullable().optional(),
+  since: z.string(),
+})
+
+export const ChangesSchema = z.object({ since: z.string(), items: z.array(ChangeItemSchema) })
 
 export const ReadingSchema = z.object({
   ticker: z.string(),
@@ -141,6 +171,8 @@ export const ReadingSchema = z.object({
   sources: z.array(NewsItemSchema),
   data_health: z.array(SourceStatusSchema),
   thesis_checked: z.string().nullable().optional(),
+  move: MoveSchema.nullable().optional(),
+  changes: ChangesSchema.nullable().optional(),
 })
 
 const HorizonStatsSchema = z.object({
@@ -232,3 +264,6 @@ export const ExposureSchema = z.object({
 })
 export type Exposure = z.infer<typeof ExposureSchema>
 export type ThesisCheck = z.infer<typeof ThesisCheckSchema>
+export type Move = z.infer<typeof MoveSchema>
+export type ChangeItem = z.infer<typeof ChangeItemSchema>
+export type Changes = z.infer<typeof ChangesSchema>
