@@ -115,3 +115,8 @@ test('cheap-stock targets keep cents', () => {
     'Average analyst target: $4.10 → $4.40',
   )
 })
+
+test("biggestMoves uses VOO's own move as the S&P 500 line when no other ticker has it", () => {
+  const voo = { ticker: 'VOO', move_date: '2026-11-05', move_notable: true, move_change_pct: -4.4, move_typical_pct: 1, market_change_pct: null, market_notable: true } as ListEntry
+  expect(biggestMoves([voo]).marketChangePct).toBe(-4.4)
+})
