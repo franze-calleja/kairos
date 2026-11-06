@@ -13,6 +13,9 @@ Rules:
 - Give 2-5 drivers: the main things moving sentiment right now.
 - Write takeaway: one plain sentence (max 25 words) that sums up the overall picture for a
   long-term investor, with the ids of the articles it rests on. Do not just repeat a driver.
+- Write move_reason only if move.notable is true in the computed data: one plain sentence (max 25
+  words) on why the price moved on move.date, citing the ids of the articles that explain it. If
+  the articles do not explain that move, or move.notable is false, leave move_reason empty (null).
 - Do not state any number that does not appear in the articles or in the computed data.
 - Set substantive_news=true only if the articles contain real company or fund developments
   (earnings, guidance, products, regulation, filings, analyst actions); false if they are mostly

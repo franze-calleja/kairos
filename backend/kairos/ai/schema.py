@@ -26,3 +26,4 @@ class AISummary(BaseModel):
     bear_case: list[Claim]
     takeaway: Claim | None = None
     thesis_check: ThesisCheck | None = None  # one-sentence synthesis shown at the top of a reading
+    move_reason: Claim | None = None  # why the last notable move happened, cited
