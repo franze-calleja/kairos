@@ -9,6 +9,7 @@ import { renderWithClient } from '../../test/utils'
 import { ComparePage } from '../ComparePage'
 
 vi.mock('lightweight-charts', () => ({
+  ColorType: { Solid: 'solid' },
   createChart: () => ({
     addSeries: () => ({ setData: () => {} }),
     timeScale: () => ({ fitContent: () => {}, setVisibleLogicalRange: () => {} }),

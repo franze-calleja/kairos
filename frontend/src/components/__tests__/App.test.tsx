@@ -1,5 +1,6 @@
 import { vi } from 'vitest'
 vi.mock('lightweight-charts', () => ({
+  ColorType: { Solid: 'solid' },
   createChart: () => ({ addSeries: () => ({ setData: () => {} }), timeScale: () => ({ fitContent: () => {}, setVisibleLogicalRange: () => {} }), remove: () => {} }),
   LineSeries: {},
 }))

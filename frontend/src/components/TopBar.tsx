@@ -1,8 +1,25 @@
 import { useState, type FormEvent } from 'react'
 import { normalizeTicker } from '../api/tickers'
 import { useSelection } from '../store/selection'
+import { useTheme } from '../store/theme'
 import { LogoMark } from './Logo'
 import { RefreshStatus } from './RefreshStatus'
+
+function ThemeToggle() {
+  const { theme, toggle } = useTheme()
+  const dark = theme === 'dark'
+  return (
+    <button
+      type="button"
+      className="theme-toggle"
+      onClick={toggle}
+      aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+      title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+    >
+      {dark ? '☀︎' : '☾'}
+    </button>
+  )
+}
 
 export function TopBar() {
   const [value, setValue] = useState('')
@@ -52,6 +69,7 @@ export function TopBar() {
         <button type="button" onClick={() => setView('settings')}>
           Settings
         </button>
+        <ThemeToggle />
       </nav>
     </header>
   )
