@@ -1,5 +1,6 @@
 import { apiError } from '../api/client'
 import { usePortfolio } from '../api/hooks'
+import { AddTradeForm } from './AddTradeForm'
 
 export const OWN_ALREADY_HELP =
   'Already own some? Log it as one buy at your average price (Gotrade shows it on the position).'
@@ -15,6 +16,7 @@ export function BuysPage() {
         <p className="muted small">Stays on your machine; never sent to the AI.</p>
       </section>
       {isError && <p className="error-box">{apiError(error)}</p>}
+      <AddTradeForm />
       {empty && (
         <section className="card">
           <p>Log your buys to see your average cost, gains and how they compare with simply buying VOO.</p>
