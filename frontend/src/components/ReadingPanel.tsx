@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { apiError } from '../api/client'
 import { useLists, useReading, useRefreshReading } from '../api/hooks'
 import { AddMoreCard } from './reading/AddMoreCard'
+import { AnalystTargetsCard } from './reading/AnalystTargetsCard'
 import { BullBearCard } from './reading/BullBearCard'
 import { DataHealth } from './reading/DataHealth'
 import { DriversCard } from './reading/DriversCard'
@@ -93,6 +94,7 @@ export function ReadingPanel({ ticker }: { ticker: string }) {
             )
           })()}
           {reading.price && <AddMoreCard price={reading.price} />}
+          <AnalystTargetsCard quick={reading.quick} price={reading.price?.last_price ?? null} />
           <EventsCard events={reading.events} asOf={reading.created_at} />
           <HypeFlagsCard hype={reading.hype} />
           <QuickNumbersCard quick={reading.quick} />

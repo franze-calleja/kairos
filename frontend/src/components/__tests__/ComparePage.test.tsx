@@ -100,3 +100,15 @@ test('shows P/E against its sector and your reason verdict', async () => {
   const reason = await screen.findByRole('row', { name: /Your reason/ })
   expect(within(reason).getByText('Challenges ⚠')).toBeInTheDocument()
 })
+
+
+test('compare shows the analysts average target with upside', async () => {
+  const nvda = { ...reading, quick: { ...reading.quick, target_mean: 245, analyst_count: 52 } }
+  const amd = { ...reading, ticker: 'AMD', price: { ...reading.price!, last_price: 100 }, quick: { ...reading.quick, target_mean: 120, analyst_count: 40 } }
+  serve({ NVDA: nvda, AMD: amd })
+  useSelection.setState({ compare: ['NVDA', 'AMD'] })
+  renderWithClient(<ComparePage />)
+  const row = await screen.findByRole('row', { name: /Analyst target/ })
+  expect(within(row).getByText('$245.00 (+19.7%)')).toBeInTheDocument()
+  expect(within(row).getByText('$120.00 (+20.0%)')).toBeInTheDocument()
+})

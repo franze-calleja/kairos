@@ -56,6 +56,12 @@ function rows(a: Reading, b: Reading, reasons: Record<string, ListEntry | undefi
         return r.quick.sector_pe !== null ? `${num(r.quick.trailing_pe)} (sector ${num(r.quick.sector_pe)})` : num(r.quick.trailing_pe)
       }, a, b),
       plain('Revenue growth', (r) => (stock(r, r.quick.revenue_growth) !== null ? ratioPct(r.quick.revenue_growth, 0) : '—'), a, b),
+      plain('Analyst target (avg)', (r) => {
+        const mean = r.quick.target_mean
+        if (r.kind !== 'stock' || mean == null) return '—'
+        const now = r.price?.last_price
+        return now ? `$${mean.toFixed(2)} (${pct((mean / now - 1) * 100)})` : `$${mean.toFixed(2)}`
+      }, a, b),
     )
   }
   if (anyEtf) {
