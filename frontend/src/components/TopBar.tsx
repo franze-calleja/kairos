@@ -40,6 +40,9 @@ export function TopBar() {
         <button type="button" onClick={() => useSelection.getState().openCompare()}>
           Compare
         </button>
+        <button type="button" onClick={() => setView('buys')}>
+          My buys
+        </button>
         <button type="button" onClick={() => setView('exposure')}>
           Exposure
         </button>

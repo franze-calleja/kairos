@@ -24,6 +24,7 @@ export const ListEntrySchema = z.object({
   hype_warning: z.boolean().nullable().default(null),
   updated_at: z.string().nullable().default(null),
   shares: z.number().nullable().default(null),
+  shares_source: z.enum(['trades', 'manual']).nullable().default(null),
   thesis: z.string().nullable().default(null),
   thesis_verdict: z.enum(['supports', 'challenges', 'mixed', 'no_signal']).nullable().default(null),
   move_date: z.string().nullable().default(null),
@@ -268,3 +269,61 @@ export type ThesisCheck = z.infer<typeof ThesisCheckSchema>
 export type Move = z.infer<typeof MoveSchema>
 export type ChangeItem = z.infer<typeof ChangeItemSchema>
 export type Changes = z.infer<typeof ChangesSchema>
+
+export const TradeSchema = z.object({
+  id: z.number(),
+  ticker: z.string(),
+  side: z.enum(['buy', 'sell']),
+  trade_date: z.string(),
+  shares: z.number(),
+  price: z.number(),
+  created_at: z.string(),
+})
+
+export const PositionSchema = z.object({
+  ticker: z.string(),
+  shares: z.number(),
+  avg_cost: num,
+  invested: z.number(),
+  value: num,
+  gain: num,
+  gain_pct: num,
+  realized: z.number(),
+  total_bought: z.number(),
+  sell_proceeds: z.number(),
+  return_pct: num,
+  voo_pct: num,
+})
+
+export const KairosSaidSchema = z.object({
+  price_label: z.enum(['stretched', 'near_average', 'below_range', 'insufficient_history']).nullable(),
+  lean: LeanSchema.nullable(),
+  ai_status: AIStatusSchema,
+})
+
+export const HistoryRowSchema = z.object({
+  id: z.number(),
+  ticker: z.string(),
+  side: z.enum(['buy', 'sell']),
+  trade_date: z.string(),
+  shares: z.number(),
+  price: z.number(),
+  amount: z.number(),
+  kairos_said: KairosSaidSchema.nullable(),
+  since_pct: num,
+  voo_since_pct: num,
+})
+
+export const PortfolioSchema = z.object({
+  positions: z.array(PositionSchema),
+  totals: z.object({ invested: z.number(), value: num, gain: num, return_pct: num, voo_pct: num }),
+  realized: z.number(),
+  history: z.array(HistoryRowSchema),
+})
+
+export const CloseSchema = z.object({ date: z.string(), close: z.number() })
+
+export type Trade = z.infer<typeof TradeSchema>
+export type Position = z.infer<typeof PositionSchema>
+export type HistoryRow = z.infer<typeof HistoryRowSchema>
+export type Portfolio = z.infer<typeof PortfolioSchema>

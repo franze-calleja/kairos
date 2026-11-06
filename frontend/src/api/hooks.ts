@@ -1,14 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, errorStatus, getParsed } from './client'
 import {
+  CloseSchema,
   DiscoverSchema,
   ExposureSchema,
   JobStatusSchema,
   ListEntrySchema,
   ListsSchema,
+  PortfolioSchema,
   ReadingSchema,
   SettingsSchema,
   TrackRecordSchema,
+  TradeSchema,
   type ListName,
 } from './schemas'
 
@@ -122,5 +125,53 @@ export function useBackupNow() {
   return useMutation({
     mutationFn: async () => (await api.post<{ file: string }>('/backup')).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['settings'] }),
+  })
+}
+
+export const usePortfolio = () =>
+  useQuery({ queryKey: ['portfolio'], queryFn: () => getParsed('/portfolio', PortfolioSchema) })
+
+export const useClose = (ticker: string | null, date: string | null) =>
+  useQuery({
+    queryKey: ['close', ticker, date],
+    queryFn: () => getParsed(`/prices/${encodeURIComponent(ticker!)}/close`, CloseSchema, { date }),
+    enabled: !!ticker && !!date,
+    retry: false,
+    staleTime: FIVE_MIN,
+  })
+
+export type NewTrade = {
+  ticker: string
+  side: 'buy' | 'sell'
+  date: string
+  price: number
+  shares?: number
+  amount?: number
+}
+
+function useInvalidatePortfolio() {
+  const qc = useQueryClient()
+  return () => {
+    qc.invalidateQueries({ queryKey: ['portfolio'] })
+    qc.invalidateQueries({ queryKey: ['lists'] })
+    qc.invalidateQueries({ queryKey: ['exposure'] })
+  }
+}
+
+export function useAddTrade() {
+  const invalidate = useInvalidatePortfolio()
+  return useMutation({
+    mutationFn: async (trade: NewTrade) => TradeSchema.parse((await api.post('/trades', trade)).data),
+    onSuccess: invalidate,
+  })
+}
+
+export function useDeleteTrade() {
+  const invalidate = useInvalidatePortfolio()
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`/trades/${id}`)
+    },
+    onSuccess: invalidate,
   })
 }

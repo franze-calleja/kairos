@@ -143,3 +143,18 @@ async def test_failed_fetch_is_not_cached(conn, yahoo):
     yahoo.holdings = good
     second = await exposure.compute_exposure(conn, NOW + timedelta(minutes=1))
     assert second["underlying"], "a transient Yahoo failure must not stick for 6 hours"
+
+
+async def test_logged_trades_override_manual_shares(conn, yahoo):
+    from datetime import date
+
+    from kairos.services.trades import add_trade
+
+    add_ticker(conn, "holdings", "NVDA")
+    set_shares(conn, "NVDA", 5)
+    add_trade(conn, "NVDA", "buy", date(2026, 11, 2), price=180.0, now=NOW, shares=2)
+    body = await exposure.compute_exposure(conn, NOW)
+    (pos,) = body["positions"]
+    assert pos["shares"] == 2 and pos["value"] == 400.0
+    add_trade(conn, "NVDA", "sell", date(2026, 11, 2), price=190.0, now=NOW, shares=2)
+    assert (await exposure.compute_exposure(conn, NOW))["positions"] == []

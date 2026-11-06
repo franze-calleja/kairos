@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from kairos.adapters.prices import get_info, get_sector_weightings, get_top_holdings
+from kairos.services.trades import net_shares
 
 CACHE_FOR = timedelta(hours=6)
 PRICE_MAX_AGE = timedelta(hours=24)
@@ -76,24 +77,28 @@ async def _position(conn: sqlite3.Connection, ticker: str, now: datetime) -> dic
     return {"price": float(price), "kind": kind, "name": name or ticker, "sector": sector}
 
 
+async def current_price(conn: sqlite3.Connection, ticker: str, now: datetime) -> float | None:
+    """Latest known price: a recent reading's, else Yahoo's."""
+    info = await _position(conn, ticker, now)
+    return info["price"] if info else None
+
+
 async def compute_exposure(conn: sqlite3.Connection, now: datetime) -> dict:
     rows = conn.execute(
-        "SELECT ticker, shares FROM lists "
-        "WHERE list_name = 'holdings' AND shares IS NOT NULL ORDER BY ticker"
+        "SELECT ticker, shares FROM lists WHERE list_name = 'holdings' ORDER BY ticker"
     ).fetchall()
     positions, missing = [], []
     for r in rows:
+        logged = net_shares(conn, r["ticker"])
+        shares = logged if logged is not None else r["shares"]  # logged trades win
+        if not shares:
+            continue
         info = await _position(conn, r["ticker"], now)
         if info is None:
             missing.append(r["ticker"])
             continue
         positions.append(
-            {
-                "ticker": r["ticker"],
-                "shares": r["shares"],
-                **info,
-                "value": r["shares"] * info["price"],
-            }
+            {"ticker": r["ticker"], "shares": shares, **info, "value": shares * info["price"]}
         )
 
     total = sum(p["value"] for p in positions)

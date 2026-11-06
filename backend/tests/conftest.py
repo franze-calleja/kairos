@@ -50,3 +50,10 @@ def fresh_market_cache():
     from kairos.services.market import clear_market_cache
 
     clear_market_cache()
+
+
+@pytest.fixture(autouse=True)
+def fresh_closes_cache():
+    from kairos.services.closes import clear_closes_cache
+
+    clear_closes_cache()

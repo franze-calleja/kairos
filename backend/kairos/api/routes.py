@@ -1,7 +1,7 @@
 import asyncio
 import sqlite3
-from datetime import UTC, datetime
-from typing import Annotated
+from datetime import UTC, date, datetime
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
@@ -14,6 +14,7 @@ from kairos.db import get_meta
 from kairos.models import Reading
 from kairos.services import scheduler
 from kairos.services.backup import BackupFailed, backup_db
+from kairos.services.closes import close_for
 from kairos.services.discover import latest_discover
 from kairos.services.exposure import compute_exposure
 from kairos.services.lists import (
@@ -24,8 +25,17 @@ from kairos.services.lists import (
     set_shares,
     set_thesis,
 )
+from kairos.services.portfolio import build_portfolio
 from kairos.services.readings import DataUnavailable, UnknownTicker, get_reading
 from kairos.services.track_record import stats
+from kairos.services.trades import (
+    Trade,
+    TradeError,
+    add_trade,
+    delete_trade,
+    list_trades,
+    net_shares,
+)
 from kairos.tickers import normalize_ticker
 
 router = APIRouter(prefix="/api")
@@ -52,6 +62,7 @@ class ListEntry(BaseModel):
     hype_warning: bool | None = None
     updated_at: str | None = None
     shares: float | None = None
+    shares_source: Literal["trades", "manual"] | None = None
     thesis: str | None = None
     thesis_verdict: str | None = None
     move_date: str | None = None
@@ -73,6 +84,12 @@ def _entry(conn: sqlite3.Connection, ticker: str, name: ListName | None = None) 
             "SELECT shares, thesis FROM lists WHERE list_name = ? AND ticker = ?", (name, ticker)
         ).fetchone()
     extra = {"shares": mine["shares"], "thesis": mine["thesis"]} if mine else {}
+    if mine and name == "holdings":
+        logged = net_shares(conn, ticker)
+        if logged is not None:  # logged trades are the source of truth once there are any
+            extra |= {"shares": logged, "shares_source": "trades"}
+        elif mine["shares"] is not None:
+            extra["shares_source"] = "manual"
     entry = _summary(conn, ticker)
     if mine and mine["thesis"] and entry.thesis_checked == mine["thesis"]:
         extra["thesis_verdict"] = entry.thesis_verdict_raw
@@ -259,6 +276,75 @@ def put_thesis(name: ListName, ticker: str, body: ThesisIn, conn: Conn) -> ListE
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
     return _entry(conn, normalize_ticker(ticker), name)
+
+
+@router.get("/prices/{ticker}/close")
+async def get_close(ticker: str, date: date) -> dict:
+    try:
+        symbol = normalize_ticker(ticker)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    found = await close_for(symbol, date, datetime.now(UTC))
+    if found is None:
+        raise HTTPException(status_code=422, detail=f"No price for {symbol} on {date.isoformat()}")
+    day, close = found
+    return {"date": day.isoformat(), "close": close}
+
+
+class TradeIn(BaseModel):
+    ticker: str
+    side: Literal["buy", "sell"]
+    date: date
+    shares: float | None = None
+    amount: float | None = None
+    price: float
+
+
+@router.get("/trades")
+def get_trades(conn: Conn) -> list[Trade]:
+    return list_trades(conn)
+
+
+@router.post("/trades", status_code=201)
+async def post_trade(body: TradeIn, conn: Conn) -> Trade:
+    try:
+        symbol = normalize_ticker(body.ticker)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    _, status = await get_info(symbol)
+    if status.detail == "unknown ticker":
+        raise HTTPException(status_code=422, detail=f"Unknown ticker: {symbol}")
+    try:
+        trade = add_trade(
+            conn,
+            symbol,
+            body.side,
+            body.date,
+            price=body.price,
+            now=datetime.now(UTC),
+            shares=body.shares,
+            amount=body.amount,
+        )
+    except TradeError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    add_ticker(conn, "holdings", symbol)
+    return trade
+
+
+@router.delete("/trades/{trade_id}", status_code=204)
+def delete_trade_route(trade_id: int, conn: Conn) -> Response:
+    try:
+        delete_trade(conn, trade_id)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail="Trade not found") from e
+    except TradeError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    return Response(status_code=204)
+
+
+@router.get("/portfolio")
+async def get_portfolio(conn: Conn) -> dict:
+    return await build_portfolio(conn, datetime.now(UTC))
 
 
 @router.get("/exposure")

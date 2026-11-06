@@ -1386,3 +1386,29 @@ h3 {
 .move-row:hover {
   background: var(--side);
 }
+
+/* My buys */
+.trade-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.trade-form input {
+  padding: 6px 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+  width: 130px;
+}
+
+.trade-form .ranges button {
+  font-size: 13px;
+  padding: 5px 10px;
+}
+
+.trade-notes {
+  min-height: 1.4em;
+  margin: 8px 0 2px;
+}

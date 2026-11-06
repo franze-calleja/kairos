@@ -33,3 +33,9 @@ test('clicking the logo returns to the overview', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Kairos home' }))
   expect(useSelection.getState().selected).toBeNull()
 })
+
+test('my buys opens the buys view', async () => {
+  renderWithClient(<TopBar />)
+  await userEvent.click(screen.getByRole('button', { name: 'My buys' }))
+  expect(useSelection.getState().view).toBe('buys')
+})

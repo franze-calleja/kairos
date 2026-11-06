@@ -2,6 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { apiError } from '../api/client'
 import { useExposure, useLists, useSetShares } from '../api/hooks'
 import type { ListEntry } from '../api/schemas'
+import { useSelection } from '../store/selection'
+import { fmtShares } from './buys'
 
 const pct = (v: number) => `${(v * 100).toFixed(1)}%`
 const usd = (v: number) => v.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
@@ -119,7 +121,17 @@ export function ExposurePage() {
                         <b>{h.ticker}</b>
                       </td>
                       <td>
-                        <SharesInput key={`${h.ticker}-${h.shares ?? ''}`} entry={h} />
+                        {h.shares_source === 'trades' ? (
+                          <button
+                            type="button"
+                            className="link-button"
+                            onClick={() => useSelection.getState().setView('buys')}
+                          >
+                            {fmtShares(h.shares ?? 0)} · from My buys
+                          </button>
+                        ) : (
+                          <SharesInput key={`${h.ticker}-${h.shares ?? ''}`} entry={h} />
+                        )}
                       </td>
                       <td className="num muted small">{pos ? usd(pos.value) : '—'}</td>
                     </tr>

@@ -200,3 +200,13 @@ async def test_second_reading_records_lean_change(settings, conn, src):
     r = await build_reading(settings, conn, "NVDA", NOW)
     (lean,) = [i for i in r.changes.items if i.kind == "lean"]
     assert (lean.before, lean.after) == ("bullish", "neutral")
+
+
+async def test_logged_trades_never_reach_the_prompt(settings, conn, src):
+    from datetime import date
+
+    from kairos.services.trades import add_trade
+
+    add_trade(conn, "NVDA", "buy", date(2026, 10, 30), price=123.45, now=NOW, shares=7.77)
+    await build_reading(settings, conn, "NVDA", NOW)
+    assert "123.45" not in src.last_prompt and "7.77" not in src.last_prompt
