@@ -1,12 +1,22 @@
 """Positions from logged trades: average cost, gains, and the same dollars in VOO. Price-only."""
 
+import json
+import sqlite3
+from collections import defaultdict
+from datetime import UTC, date, datetime, time, timedelta
+from zoneinfo import ZoneInfo
+
 import pandas as pd
 from pydantic import BaseModel
 
-from kairos.services.closes import close_on
-from kairos.services.trades import SHARE_EPSILON, Trade
+from kairos.services.closes import close_on, closes_since
+from kairos.services.exposure import current_price
+from kairos.services.trades import SHARE_EPSILON, Trade, list_trades
 
 MARKET_TICKER = "VOO"
+NY = ZoneInfo("America/New_York")
+SESSION_CLOSE_NY = time(16, 0)
+SAID_WINDOW = timedelta(hours=36)
 
 
 class Position(BaseModel):
@@ -120,4 +130,67 @@ def totals(positions: list[Position]) -> dict:
         "gain": value - invested if value is not None else None,
         "return_pct": _pct(value + proceeds - bought, bought) if value is not None else None,
         "voo_pct": voo_pct,
+    }
+
+
+def kairos_said(conn: sqlite3.Connection, ticker: str, trade_date: date) -> dict | None:
+    """The reading the owner could have seen before that US session closed (max 36h old)."""
+    close = datetime.combine(trade_date, SESSION_CLOSE_NY, tzinfo=NY).astimezone(UTC)
+    rows = conn.execute(
+        "SELECT created_at, lean, ai_status, payload FROM readings WHERE ticker = ? "
+        "ORDER BY created_at DESC, id DESC",
+        (ticker,),
+    ).fetchall()
+    for r in rows:
+        created = datetime.fromisoformat(r["created_at"])
+        if created >= close:
+            continue
+        if close - created > SAID_WINDOW:
+            return None
+        try:
+            label = (json.loads(r["payload"]).get("price") or {}).get("label")
+        except ValueError:
+            label = None
+        return {"price_label": label, "lean": r["lean"], "ai_status": r["ai_status"]}
+    return None
+
+
+def _pct_change(now: float | None, then: float | None) -> float | None:
+    return (now / then - 1) * 100 if now is not None and then else None
+
+
+async def build_portfolio(conn: sqlite3.Connection, now: datetime) -> dict:
+    trades = list_trades(conn)
+    if not trades:
+        return {"positions": [], "totals": totals([]), "realized": 0.0, "history": []}
+    earliest = min(t.trade_date for t in trades)
+    voo_closes = await closes_since(MARKET_TICKER, earliest, now)
+    voo_now = await current_price(conn, MARKET_TICKER, now)
+    by_ticker: dict[str, list[Trade]] = defaultdict(list)
+    for t in trades:
+        by_ticker[t.ticker].append(t)
+    prices = {tk: await current_price(conn, tk, now) for tk in sorted(by_ticker)}
+    positions = [
+        position_for(tk, ts, prices[tk], voo_closes, voo_now)
+        for tk, ts in sorted(by_ticker.items())
+    ]
+    history = []
+    for t in trades:  # newest first
+        row = {
+            **t.model_dump(include={"id", "ticker", "side", "trade_date", "shares", "price"}),
+            "amount": t.shares * t.price,
+            "kairos_said": kairos_said(conn, t.ticker, t.trade_date),
+            "since_pct": None,
+            "voo_since_pct": None,
+        }
+        if t.side == "buy":
+            row["since_pct"] = _pct_change(prices[t.ticker], t.price)
+            voo_then = close_on(voo_closes, t.trade_date) if voo_closes is not None else None
+            row["voo_since_pct"] = _pct_change(voo_now, voo_then[1] if voo_then else None)
+        history.append(row)
+    return {
+        "positions": [p for p in positions if p.shares > 0],
+        "totals": totals(positions),
+        "realized": sum(p.realized for p in positions),
+        "history": history,
     }

@@ -76,6 +76,12 @@ async def _position(conn: sqlite3.Connection, ticker: str, now: datetime) -> dic
     return {"price": float(price), "kind": kind, "name": name or ticker, "sector": sector}
 
 
+async def current_price(conn: sqlite3.Connection, ticker: str, now: datetime) -> float | None:
+    """Latest known price: a recent reading's, else Yahoo's."""
+    info = await _position(conn, ticker, now)
+    return info["price"] if info else None
+
+
 async def compute_exposure(conn: sqlite3.Connection, now: datetime) -> dict:
     rows = conn.execute(
         "SELECT ticker, shares FROM lists "

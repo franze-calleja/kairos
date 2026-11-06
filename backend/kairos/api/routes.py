@@ -1,7 +1,7 @@
 import asyncio
 import sqlite3
 from datetime import UTC, date, datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
@@ -25,8 +25,10 @@ from kairos.services.lists import (
     set_shares,
     set_thesis,
 )
+from kairos.services.portfolio import build_portfolio
 from kairos.services.readings import DataUnavailable, UnknownTicker, get_reading
 from kairos.services.track_record import stats
+from kairos.services.trades import Trade, TradeError, add_trade, delete_trade, list_trades
 from kairos.tickers import normalize_ticker
 
 router = APIRouter(prefix="/api")
@@ -273,6 +275,62 @@ async def get_close(ticker: str, date: date) -> dict:
         raise HTTPException(status_code=422, detail=f"No price for {symbol} on {date.isoformat()}")
     day, close = found
     return {"date": day.isoformat(), "close": close}
+
+
+class TradeIn(BaseModel):
+    ticker: str
+    side: Literal["buy", "sell"]
+    date: date
+    shares: float | None = None
+    amount: float | None = None
+    price: float
+
+
+@router.get("/trades")
+def get_trades(conn: Conn) -> list[Trade]:
+    return list_trades(conn)
+
+
+@router.post("/trades", status_code=201)
+async def post_trade(body: TradeIn, conn: Conn) -> Trade:
+    try:
+        symbol = normalize_ticker(body.ticker)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    _, status = await get_info(symbol)
+    if status.detail == "unknown ticker":
+        raise HTTPException(status_code=422, detail=f"Unknown ticker: {symbol}")
+    try:
+        trade = add_trade(
+            conn,
+            symbol,
+            body.side,
+            body.date,
+            price=body.price,
+            now=datetime.now(UTC),
+            shares=body.shares,
+            amount=body.amount,
+        )
+    except TradeError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    add_ticker(conn, "holdings", symbol)
+    return trade
+
+
+@router.delete("/trades/{trade_id}", status_code=204)
+def delete_trade_route(trade_id: int, conn: Conn) -> Response:
+    try:
+        delete_trade(conn, trade_id)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail="Trade not found") from e
+    except TradeError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    return Response(status_code=204)
+
+
+@router.get("/portfolio")
+async def get_portfolio(conn: Conn) -> dict:
+    return await build_portfolio(conn, datetime.now(UTC))
 
 
 @router.get("/exposure")
