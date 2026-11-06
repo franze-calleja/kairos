@@ -1,4 +1,5 @@
 import asyncio
+from datetime import date, timedelta
 from typing import Any
 
 import pandas as pd
@@ -20,6 +21,25 @@ async def get_history(ticker: str, period: str = "1y") -> tuple[pd.DataFrame | N
     if df is None or df.empty:
         return None, error("yfinance", "no price history")
     return df[["Close", "Volume"]].dropna(subset=["Close"]), ok("yfinance")
+
+
+def _closes(ticker: str, start: date) -> pd.Series:
+    df = yf.Ticker(ticker).history(start=start - timedelta(days=7), auto_adjust=False)
+    if df is None or df.empty:
+        return pd.Series(dtype=float)
+    closes = df["Close"].dropna()
+    return pd.Series(closes.to_numpy(dtype=float), index=[ts.date() for ts in closes.index])
+
+
+async def get_closes(ticker: str, start: date) -> tuple[pd.Series | None, SourceStatus]:
+    """Daily closes since a date: split-adjusted, not dividend-adjusted (actual paid prices)."""
+    try:
+        closes = await asyncio.to_thread(_closes, ticker, start)
+    except Exception as e:  # yfinance raises many types; treat all as source errors
+        return None, error("yfinance", f"closes: {e}")
+    if closes.empty:
+        return None, error("yfinance", "no price history")
+    return closes, ok("yfinance")
 
 
 async def get_info(ticker: str) -> tuple[dict[str, Any] | None, SourceStatus]:

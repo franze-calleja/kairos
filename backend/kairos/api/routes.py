@@ -1,6 +1,6 @@
 import asyncio
 import sqlite3
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response
@@ -14,6 +14,7 @@ from kairos.db import get_meta
 from kairos.models import Reading
 from kairos.services import scheduler
 from kairos.services.backup import BackupFailed, backup_db
+from kairos.services.closes import close_for
 from kairos.services.discover import latest_discover
 from kairos.services.exposure import compute_exposure
 from kairos.services.lists import (
@@ -259,6 +260,19 @@ def put_thesis(name: ListName, ticker: str, body: ThesisIn, conn: Conn) -> ListE
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
     return _entry(conn, normalize_ticker(ticker), name)
+
+
+@router.get("/prices/{ticker}/close")
+async def get_close(ticker: str, date: date) -> dict:
+    try:
+        symbol = normalize_ticker(ticker)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    found = await close_for(symbol, date, datetime.now(UTC))
+    if found is None:
+        raise HTTPException(status_code=422, detail=f"No price for {symbol} on {date.isoformat()}")
+    day, close = found
+    return {"date": day.isoformat(), "close": close}
 
 
 @router.get("/exposure")
