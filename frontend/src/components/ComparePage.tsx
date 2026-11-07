@@ -1,15 +1,15 @@
-import { createChart, LineSeries } from 'lightweight-charts'
+import { ColorType, createChart, LineSeries } from 'lightweight-charts'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { apiError } from '../api/client'
 import { useLists, useReading } from '../api/hooks'
 import type { ListEntry, Reading } from '../api/schemas'
 import { normalizeTicker } from '../api/tickers'
 import { useSelection } from '../store/selection'
+import { chartColors, useTheme } from '../store/theme'
 import { oneYearReturn, rebase, topHoldingsOverlap } from './compare'
 import { money, num, pct, ratioPct } from './format'
 import { PRICE_LABELS_SHORT } from './lean'
 
-const COLORS = ['#4f46e5', '#d97706'] as const // validated pair (light surface)
 const RANGES = { '1M': 21, '6M': 126, '1Y': Infinity } as const
 type Range = keyof typeof RANGES
 const LEANS = { bullish: 'Bullish', neutral: 'Neutral', bearish: 'Bearish' } as const
@@ -89,6 +89,9 @@ function rows(a: Reading, b: Reading, reasons: Record<string, ListEntry | undefi
 function RelativeChart({ a, b }: { a: Reading; b: Reading }) {
   const ref = useRef<HTMLDivElement>(null)
   const [range, setRange] = useState<Range>('1Y')
+  const theme = useTheme((s) => s.theme)
+  const c = chartColors(theme)
+  const COLORS = c.pair
   useEffect(() => {
     const ha = a.price?.history ?? []
     const hb = b.price?.history ?? []
@@ -98,8 +101,12 @@ function RelativeChart({ a, b }: { a: Reading; b: Reading }) {
     const chart = createChart(ref.current, {
       height: 240,
       autoSize: true,
-      layout: { textColor: '#6b7280', attributionLogo: true },
-      grid: { vertLines: { visible: false }, horzLines: { color: '#f3f4f6' } },
+      layout: {
+        textColor: c.text,
+        background: { type: ColorType.Solid, color: 'transparent' },
+        attributionLogo: true,
+      },
+      grid: { vertLines: { visible: false }, horzLines: { color: c.grid } },
       rightPriceScale: { borderVisible: false },
       timeScale: { borderVisible: false },
     })
@@ -107,7 +114,7 @@ function RelativeChart({ a, b }: { a: Reading; b: Reading }) {
     chart.addSeries(LineSeries, { color: COLORS[1], lineWidth: 2, title: b.ticker }).setData(rebase(hb, from))
     chart.timeScale().fitContent()
     return () => chart.remove()
-  }, [a, b, range])
+  }, [a, b, range, c, COLORS])
   return (
     <section className="chart-wrap">
       <div className="chart-top">
@@ -154,6 +161,7 @@ function TickerInput({ index }: { index: 0 | 1 }) {
 }
 
 export function ComparePage() {
+  const COLORS = chartColors(useTheme((s) => s.theme)).pair
   const [ta, tb] = useSelection((s) => s.compare)
   const same = !!ta && ta === tb
   const ra = useReading(same ? null : ta)

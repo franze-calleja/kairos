@@ -1,5 +1,6 @@
-import { createChart, LineSeries } from 'lightweight-charts'
+import { ColorType, createChart, LineSeries } from 'lightweight-charts'
 import { useEffect, useRef, useState } from 'react'
+import { chartColors, useTheme } from '../../store/theme'
 
 type Point = { date: string; close: number }
 const RANGES = { '1M': 21, '6M': 126, '1Y': Infinity } as const
@@ -19,8 +20,10 @@ function movingAverage(points: Point[], window: number) {
 export function PriceChart({ history }: { history: Point[] }) {
   const ref = useRef<HTMLDivElement>(null)
   const [range, setRange] = useState<Range>('1Y')
+  const theme = useTheme((s) => s.theme)
 
   useEffect(() => {
+    const c = chartColors(theme)
     if (!ref.current || history.length === 0) return
     const visible = history.slice(-Math.min(RANGES[range], history.length))
     const from = visible[0].date
@@ -29,23 +32,27 @@ export function PriceChart({ history }: { history: Point[] }) {
     const chart = createChart(ref.current, {
       height: 240,
       autoSize: true,
-      layout: { textColor: '#6b7280', attributionLogo: true },
-      grid: { vertLines: { visible: false }, horzLines: { color: '#f3f4f6' } },
+      layout: {
+        textColor: c.text,
+        background: { type: ColorType.Solid, color: 'transparent' },
+        attributionLogo: true,
+      },
+      grid: { vertLines: { visible: false }, horzLines: { color: c.grid } },
       rightPriceScale: { borderVisible: false },
       timeScale: { borderVisible: false },
     })
-    chart.addSeries(LineSeries, { color: '#4f46e5', lineWidth: 2 }).setData(
+    chart.addSeries(LineSeries, { color: c.price, lineWidth: 2 }).setData(
       visible.map((p) => ({ time: p.date, value: p.close })),
     )
     const quiet = { lineWidth: 1, priceLineVisible: false, lastValueVisible: false } as const
-    chart.addSeries(LineSeries, { color: '#9ca3af', ...quiet }).setData(clip(movingAverage(history, 50)))
-    chart.addSeries(LineSeries, { color: '#f59e0b', ...quiet }).setData(clip(movingAverage(history, 200)))
+    chart.addSeries(LineSeries, { color: c.ma50, ...quiet }).setData(clip(movingAverage(history, 50)))
+    chart.addSeries(LineSeries, { color: c.ma200, ...quiet }).setData(clip(movingAverage(history, 200)))
     chart.timeScale().fitContent()
     // A little empty space on the left so the first date label isn't clipped.
     const pad = Math.max(1, Math.round(visible.length * 0.03))
     chart.timeScale().setVisibleLogicalRange({ from: -pad, to: visible.length - 1 + pad / 2 })
     return () => chart.remove()
-  }, [history, range])
+  }, [history, range, theme])
 
   return (
     <div className="chart-wrap">

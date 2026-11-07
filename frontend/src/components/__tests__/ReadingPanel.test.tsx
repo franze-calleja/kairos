@@ -9,6 +9,7 @@ import { ReadingPanel } from '../ReadingPanel'
 
 const ranges: { from: number; to: number }[] = []
 vi.mock('lightweight-charts', () => ({
+  ColorType: { Solid: 'solid' },
   createChart: () => ({
     addSeries: () => ({ setData: () => {} }),
     timeScale: () => ({

@@ -39,3 +39,13 @@ test('my buys opens the buys view', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'My buys' }))
   expect(useSelection.getState().view).toBe('buys')
 })
+
+test('theme button switches between dark and light', async () => {
+  const { useTheme } = await import('../../store/theme')
+  useTheme.getState().set('light')
+  renderWithClient(<TopBar />)
+  await userEvent.click(screen.getByRole('button', { name: 'Switch to dark mode' }))
+  expect(document.documentElement.dataset.theme).toBe('dark')
+  await userEvent.click(screen.getByRole('button', { name: 'Switch to light mode' }))
+  expect(document.documentElement.dataset.theme).toBe('light')
+})
